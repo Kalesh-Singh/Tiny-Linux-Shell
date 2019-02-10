@@ -39,7 +39,7 @@ void sigquit_handler(int sig);
 
 void quit();        // Terminates the shell process
 void run_in_fg(struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
-void run_in_bg(struct cmdline_tokens *token);   // Creates and runs a process in the background.
+void run_in_bg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the background.
 //----------------------------------
 
 
@@ -150,7 +150,7 @@ void eval(const char *cmdline) {
         case PARSELINE_ERROR:
             return;
         case PARSELINE_BG:
-            run_in_bg(&token);
+            run_in_bg(cmdline, &token);
             break;
         case PARSELINE_FG:
             switch (token.builtin) {
@@ -216,11 +216,19 @@ void run_in_fg(struct cmdline_tokens *token) {
 
 }
 
-void run_in_bg(struct cmdline_tokens *token) {
+void run_in_bg(const char *cmdline, struct cmdline_tokens *token) {
     pid_t pid = Fork();
     if (pid == 0) {
         Execve(token->argv[0], token->argv, environ);
     } else {
+        addjob(job_list, pid, BG, cmdline);
+        struct job_t *job = getjobpid(job_list, pid);
+        int jid = job->jid;
+
+        char *f_str = "[%d] (%d) %s &\n";
+        char str[MAXLINE];
+        sprintf(str, f_str, jid, pid, token->argv[0]);
+        Fputs(str, stdout);
         Waitpid(pid, NULL, WNOHANG);
 
     }
