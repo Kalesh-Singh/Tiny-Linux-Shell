@@ -38,8 +38,8 @@ void sigquit_handler(int sig);
 //------- Built In Commands --------
 
 void quit();        // Terminates the shell process
-void run_in_fg();   // Creates and runs a process in the foreground.
-
+void run_in_fg(struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
+void run_in_bg(struct cmdline_tokens *token);   // Creates and runs a process in the background.
 //----------------------------------
 
 
@@ -150,7 +150,7 @@ void eval(const char *cmdline) {
         case PARSELINE_ERROR:
             return;
         case PARSELINE_BG:
-            // TODO:
+            run_in_bg(&token);
             break;
         case PARSELINE_FG:
             switch (token.builtin) {
@@ -214,4 +214,14 @@ void run_in_fg(struct cmdline_tokens *token) {
         Waitpid(pid, NULL, WUNTRACED);
     }
 
+}
+
+void run_in_bg(struct cmdline_tokens *token) {
+    pid_t pid = Fork();
+    if (pid == 0) {
+        Execve(token->argv[0], token->argv, environ);
+    } else {
+        Waitpid(pid, NULL, WNOHANG);
+
+    }
 }
