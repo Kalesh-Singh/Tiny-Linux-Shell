@@ -148,6 +148,10 @@ void eval(const char *cmdline)
     {
         return;
     }
+
+    if (token.builtin == BUILTIN_QUIT) {
+        exit(0);
+    }
     return;
 }
 
