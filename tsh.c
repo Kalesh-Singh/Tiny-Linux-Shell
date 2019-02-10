@@ -53,12 +53,14 @@ void change_signal_mask(int how);
 //----------------------------------------
 
 //------- Built In Commands --------
-
 void quit();        // Terminates the shell process
-void run_in_fg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
-void run_in_bg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the background.
+void jobs();
 //----------------------------------
 
+//-------Foreground and Background Jobs---------
+void run_in_fg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
+void run_in_bg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the background.
+//---------------------------------------------
 
 /*
  * <Write main's function header documentation. What does main do?>
@@ -178,6 +180,7 @@ void eval(const char *cmdline) {
                 case BUILTIN_BG:
                     break;
                 case BUILTIN_JOBS:
+                    jobs();
                     break;
                 case BUILTIN_NONE:
                     run_in_fg(cmdline, &token);
@@ -222,6 +225,12 @@ void quit() {
     exit(0);
 }
 
+void jobs() {
+    change_signal_mask(SIG_BLOCK);
+    listjobs(job_list, STDOUT_FILENO);
+    change_signal_mask(SIG_UNBLOCK);
+}
+
 void run_in_fg(const char *cmdline, struct cmdline_tokens *token) {
     pid_t pid = Fork();
 
@@ -250,9 +259,9 @@ void run_in_bg(const char *cmdline, struct cmdline_tokens *token) {
         change_signal_mask(SIG_UNBLOCK);
         int jid = job->jid;
 
-        char *f_str = "[%d] (%d) %s &\n";
+        char *f_str = "[%d] (%d) %s\n";
         char str[MAXLINE];
-        sprintf(str, f_str, jid, pid, token->argv[0]);
+        sprintf(str, f_str, jid, pid, cmdline);
         Fputs(str, stdout);
 
         Waitpid(pid, NULL, WNOHANG);
