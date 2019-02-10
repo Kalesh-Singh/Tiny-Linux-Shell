@@ -38,6 +38,7 @@ void sigquit_handler(int sig);
 //------- Built In Commands --------
 
 void quit();        // Terminates the shell process
+void run_in_fg();   // Creates and runs a process in the foreground.
 
 //----------------------------------
 
@@ -144,22 +145,27 @@ void eval(const char *cmdline) {
     // Parse command line
     parse_result = parseline(cmdline, &token);
 
-    if (parse_result == PARSELINE_ERROR || parse_result == PARSELINE_EMPTY) {
-        return;
-    }
-
-
-    switch (token.builtin) {
-        case BUILTIN_QUIT:
-            quit();
-        case BUILTIN_FG:
+    switch (parse_result) {
+        case PARSELINE_EMPTY:
+        case PARSELINE_ERROR:
+            return;
+        case PARSELINE_BG:
+            // TODO:
             break;
-        case BUILTIN_BG:
-            break;
-        case BUILTIN_JOBS:
-            break;
-        case BUILTIN_NONE:
-            break;
+        case PARSELINE_FG:
+            switch (token.builtin) {
+                case BUILTIN_QUIT:
+                    quit();
+                case BUILTIN_FG:
+                    break;
+                case BUILTIN_BG:
+                    break;
+                case BUILTIN_JOBS:
+                    break;
+                case BUILTIN_NONE:
+                    run_in_fg(&token);
+                    break;
+            }
     }
 
     return;
@@ -197,4 +203,15 @@ void sigtstp_handler(int sig) {
 
 void quit() {
     exit(0);
+}
+
+void run_in_fg(struct cmdline_tokens *token) {
+    pid_t pid = Fork();
+
+    if (pid == 0) {
+        Execve(token->argv[0], token->argv, environ);
+    } else {
+        Waitpid(pid, NULL, WUNTRACED);
+    }
+
 }
