@@ -35,10 +35,27 @@ void sigint_handler(int sig);
 
 void sigquit_handler(int sig);
 
+/* ------ Un/Blocking of Signals ----------
+Blocks and unblocks the signal set:
+ { SIGCHLD, SIGINT, SIGTSTP }
+
+ how - expects one of the following arguments.
+    SIG_BLOCK
+        The set of blocked signals is the union of the current
+        set and the set argument.
+
+    SIG_UNBLOCK
+        The signals in set are removed from the current set of
+        blocked signals.  It is permissible to attempt to unblock
+        a signal which is  not blocked.
+*/
+void change_signal_mask(int how);
+//----------------------------------------
+
 //------- Built In Commands --------
 
 void quit();        // Terminates the shell process
-void run_in_fg(struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
+void run_in_fg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
 void run_in_bg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the background.
 //----------------------------------
 
@@ -163,7 +180,7 @@ void eval(const char *cmdline) {
                 case BUILTIN_JOBS:
                     break;
                 case BUILTIN_NONE:
-                    run_in_fg(&token);
+                    run_in_fg(cmdline, &token);
                     break;
             }
     }
@@ -205,13 +222,19 @@ void quit() {
     exit(0);
 }
 
-void run_in_fg(struct cmdline_tokens *token) {
+void run_in_fg(const char *cmdline, struct cmdline_tokens *token) {
     pid_t pid = Fork();
 
     if (pid == 0) {
         Execve(token->argv[0], token->argv, environ);
     } else {
+        change_signal_mask(SIG_BLOCK);
+        addjob(job_list, pid, FG, cmdline);
+        change_signal_mask(SIG_UNBLOCK);
         Waitpid(pid, NULL, WUNTRACED);
+        change_signal_mask(SIG_BLOCK);
+        deletejob(job_list, pid);
+        change_signal_mask(SIG_UNBLOCK);
     }
 
 }
@@ -221,15 +244,26 @@ void run_in_bg(const char *cmdline, struct cmdline_tokens *token) {
     if (pid == 0) {
         Execve(token->argv[0], token->argv, environ);
     } else {
+        change_signal_mask(SIG_BLOCK);
         addjob(job_list, pid, BG, cmdline);
         struct job_t *job = getjobpid(job_list, pid);
+        change_signal_mask(SIG_UNBLOCK);
         int jid = job->jid;
 
         char *f_str = "[%d] (%d) %s &\n";
         char str[MAXLINE];
         sprintf(str, f_str, jid, pid, token->argv[0]);
         Fputs(str, stdout);
+
         Waitpid(pid, NULL, WNOHANG);
 
     }
+}
+void change_signal_mask(int how) {
+    sigset_t sig_set;
+    Sigemptyset(&sig_set);
+    Sigaddset(&sig_set, SIGCHLD);
+    Sigaddset(&sig_set, SIGINT);
+    Sigaddset(&sig_set, SIGTSTP);
+    Sigprocmask(how, &sig_set, NULL);
 }
