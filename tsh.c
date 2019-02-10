@@ -148,22 +148,18 @@ void eval(const char *cmdline) {
         return;
     }
 
-    if (token.builtin == BUILTIN_NONE) {
 
-    } else {
-        switch (token.builtin) {
-            case BUILTIN_QUIT:
-                quit();
-            case: BUILTIN_BG:
-                // TODO:
-                break;
-            case BUILTIN_FG:
-                // TODO:
-                break;
-            case BUILTIN_JOBS:
-                // TODO:
-                break;
-        }
+    switch (token.builtin) {
+        case BUILTIN_QUIT:
+            quit();
+        case BUILTIN_FG:
+            break;
+        case BUILTIN_BG:
+            break;
+        case BUILTIN_JOBS:
+            break;
+        case BUILTIN_NONE:
+            break;
     }
 
     return;
