@@ -454,7 +454,7 @@ void listjobs(struct job_t *jl, int output_fd)
 {
     check_blocked();
     int i;
-    char buf[MAXLINE_TSH];
+    char buf[MAXLINE_TSH + 1];
 
     for (i = 0; i < MAXJOBS; i++)
     {
