@@ -35,21 +35,24 @@ void sigint_handler(int sig);
 
 void sigquit_handler(int sig);
 
-/* ------ Un/Blocking of Signals ----------
-Blocks and unblocks the signal set:
- { SIGCHLD, SIGINT, SIGTSTP }
-
- how - expects one of the following arguments.
-    SIG_BLOCK
-        The set of blocked signals is the union of the current
-        set and the set argument.
-
-    SIG_UNBLOCK
-        The signals in set are removed from the current set of
-        blocked signals.  It is permissible to attempt to unblock
-        a signal which is  not blocked.
-*/
+// ------- Signals ----------
+/* Blocks and unblocks the signal set:
+ * { SIGCHLD, SIGINT, SIGTSTP }
+ *
+ * how - expects one of the following arguments.
+ *  SIG_BLOCK
+ *      The set of blocked signals is the union of the current
+ *      set and the set argument.
+ *  SIG_UNBLOCK
+ *      The signals in set are removed from the current set of
+ *      blocked signals.  It is permissible to attempt to unblock
+ *      a signal which is  not blocked. */
 void change_signal_mask(int how);
+
+/* Restores the signals:
+ *  {SIGCHLD, SIGINT, SIGTSTP, SIGQUIT }
+ *  to their default behaviors. */
+void restore_signal_defaults();
 //----------------------------------------
 
 //------- Built In Commands --------
@@ -206,6 +209,15 @@ void sigchld_handler(int sig) {
  * <What does sigint_handler do?>
  */
 void sigint_handler(int sig) {
+    change_signal_mask(SIG_BLOCK);
+    pid_t fg_pid = fgpid(job_list);
+    struct job_t *job = getjobpid(job_list, fg_pid);
+    change_signal_mask(SIG_UNBLOCK);
+    Kill(-fg_pid, SIGINT);
+    char *f_str = "Job [%d] (%d) terminated by signal %d\n";
+    char str[MAXLINE];
+    sprintf(str, f_str, job->jid, job->pid, sig);
+    Fputs(str, stdout);
     return;
 }
 
@@ -232,12 +244,15 @@ void jobs() {
 }
 
 void run_in_fg(const char *cmdline, struct cmdline_tokens *token) {
+    change_signal_mask(SIG_BLOCK);
     pid_t pid = Fork();
 
     if (pid == 0) {
+        Setpgid(0, 0);
+        change_signal_mask(SIG_UNBLOCK);
+        restore_signal_defaults();
         Execve(token->argv[0], token->argv, environ);
     } else {
-        change_signal_mask(SIG_BLOCK);
         addjob(job_list, pid, FG, cmdline);
         change_signal_mask(SIG_UNBLOCK);
         Waitpid(pid, NULL, WUNTRACED);
@@ -245,15 +260,18 @@ void run_in_fg(const char *cmdline, struct cmdline_tokens *token) {
         deletejob(job_list, pid);
         change_signal_mask(SIG_UNBLOCK);
     }
-
 }
 
 void run_in_bg(const char *cmdline, struct cmdline_tokens *token) {
+    change_signal_mask(SIG_BLOCK);
     pid_t pid = Fork();
+
     if (pid == 0) {
+        Setpgid(0, 0);
+        change_signal_mask(SIG_UNBLOCK);
+        restore_signal_defaults();
         Execve(token->argv[0], token->argv, environ);
     } else {
-        change_signal_mask(SIG_BLOCK);
         addjob(job_list, pid, BG, cmdline);
         struct job_t *job = getjobpid(job_list, pid);
         change_signal_mask(SIG_UNBLOCK);
@@ -265,9 +283,9 @@ void run_in_bg(const char *cmdline, struct cmdline_tokens *token) {
         Fputs(str, stdout);
 
         Waitpid(pid, NULL, WNOHANG);
-
     }
 }
+
 void change_signal_mask(int how) {
     sigset_t sig_set;
     Sigemptyset(&sig_set);
@@ -275,4 +293,11 @@ void change_signal_mask(int how) {
     Sigaddset(&sig_set, SIGINT);
     Sigaddset(&sig_set, SIGTSTP);
     Sigprocmask(how, &sig_set, NULL);
+}
+
+void restore_signal_defaults() {
+    Signal(SIGCHLD, SIG_DFL);
+    Signal(SIGINT, SIG_DFL);
+    Signal(SIGTSTP, SIG_DFL);
+    Signal(SIGQUIT, SIG_DFL);
 }
