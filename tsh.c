@@ -218,6 +218,9 @@ void sigint_handler(int sig) {
     char str[MAXLINE];
     sprintf(str, f_str, fg_jid, fg_pid, sig);
     Fputs(str, stdout);
+    change_signal_mask(SIG_BLOCK);
+    deletejob(job_list, fg_pid);
+    change_signal_mask(SIG_UNBLOCK);
     return;
 }
 
@@ -225,6 +228,16 @@ void sigint_handler(int sig) {
  * <What does sigtstp_handler do?>
  */
 void sigtstp_handler(int sig) {
+    change_signal_mask(SIG_BLOCK);
+    pid_t fg_pid = fgpid(job_list);
+    struct job_t *fg_job = getjobpid(job_list, fg_pid);
+    fg_job->state = ST;
+    change_signal_mask(SIG_UNBLOCK);
+    Kill(-fg_pid, SIGTSTP);
+    char *f_str = "Job [%d] (%d) stopped by signal %d\n";
+    char str[MAXLINE];
+    sprintf(str, f_str, fg_job->jid, fg_job->pid, sig);
+    Fputs(str, stdout);
     return;
 }
 
