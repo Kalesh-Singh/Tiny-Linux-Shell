@@ -211,12 +211,12 @@ void sigchld_handler(int sig) {
 void sigint_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     pid_t fg_pid = fgpid(job_list);
-    struct job_t *job = getjobpid(job_list, fg_pid);
+    int fg_jid = pid2jid(job_list, fg_pid);
     change_signal_mask(SIG_UNBLOCK);
     Kill(-fg_pid, SIGINT);
     char *f_str = "Job [%d] (%d) terminated by signal %d\n";
     char str[MAXLINE];
-    sprintf(str, f_str, job->jid, job->pid, sig);
+    sprintf(str, f_str, fg_jid, fg_pid, sig);
     Fputs(str, stdout);
     return;
 }
