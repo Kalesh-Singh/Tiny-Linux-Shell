@@ -270,11 +270,13 @@ void run_in_fg(const char *cmdline, struct cmdline_tokens *token) {
     } else {
         addjob(job_list, pid, FG, cmdline);
         change_signal_mask(SIG_UNBLOCK);
-        Pause();
-//        Waitpid(pid, NULL, WUNTRACED);
-////        change_signal_mask(SIG_BLOCK);
-//        deletejob(job_list, pid);
-//        change_signal_mask(SIG_UNBLOCK);
+        int wstatus;
+        Waitpid(pid, &wstatus, WUNTRACED);
+        if ( WIFEXITED(wstatus)) {      // If child exited.
+            change_signal_mask(SIG_BLOCK);
+            deletejob(job_list, pid);
+            change_signal_mask(SIG_UNBLOCK);
+        }
     }
 }
 
