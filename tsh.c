@@ -46,8 +46,10 @@ void sigquit_handler(int sig);
  *  SIG_UNBLOCK
  *      The signals in set are removed from the current set of
  *      blocked signals.  It is permissible to attempt to unblock
- *      a signal which is  not blocked. */
-void change_signal_mask(int how);
+ *      a signal which is  not blocked.
+ *  Return Value:
+ *      The old mask. */
+sigset_t change_signal_mask(int how);
 
 /* Restores the signals:
  *  {SIGCHLD, SIGINT, SIGTSTP, SIGQUIT }
@@ -268,10 +270,11 @@ void run_in_fg(const char *cmdline, struct cmdline_tokens *token) {
     } else {
         addjob(job_list, pid, FG, cmdline);
         change_signal_mask(SIG_UNBLOCK);
-        Waitpid(pid, NULL, WUNTRACED);
-        change_signal_mask(SIG_BLOCK);
-        deletejob(job_list, pid);
-        change_signal_mask(SIG_UNBLOCK);
+        Pause();
+//        Waitpid(pid, NULL, WUNTRACED);
+////        change_signal_mask(SIG_BLOCK);
+//        deletejob(job_list, pid);
+//        change_signal_mask(SIG_UNBLOCK);
     }
 }
 
@@ -299,13 +302,15 @@ void run_in_bg(const char *cmdline, struct cmdline_tokens *token) {
     }
 }
 
-void change_signal_mask(int how) {
+sigset_t change_signal_mask(int how) {
     sigset_t sig_set;
+    sigset_t old_set;
     Sigemptyset(&sig_set);
     Sigaddset(&sig_set, SIGCHLD);
     Sigaddset(&sig_set, SIGINT);
     Sigaddset(&sig_set, SIGTSTP);
-    Sigprocmask(how, &sig_set, NULL);
+    Sigprocmask(how, &sig_set, &old_set);
+    return old_set;
 }
 
 void restore_signal_defaults() {
