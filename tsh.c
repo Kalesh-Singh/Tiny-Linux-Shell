@@ -200,6 +200,7 @@ void eval(const char *cmdline) {
 }
 
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
+    change_signal_mask(SIG_UNBLOCK);
     sigset_t old_mask = change_signal_mask(SIG_BLOCK);
     pid_t pid = Fork();
     if (pid == 0) {
@@ -234,7 +235,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
  */
 void sigchld_handler(int sig) {
     int wstatus;
-    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED|WNOHANG);
+    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED);
 
     change_signal_mask(SIG_BLOCK);
     if (WIFEXITED(wstatus)) {               // If child exited.
