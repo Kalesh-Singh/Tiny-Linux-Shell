@@ -67,6 +67,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
 
 void run_in_fg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
 void run_in_bg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the background.
+void printMsg(int jid, pid_t pid, int sig);
 //---------------------------------------------
 
 /*
@@ -214,10 +215,13 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
             state = BG;
         }
         addjob(job_list, pid, state, cmdline);
-        change_signal_mask(SIG_UNBLOCK);
+
         if (parse_result == PARSELINE_FG) {
             Sigsuspend(&old_mask);
         }
+        // NOTE: The signals must be unblocked AFTER the call to sigsuspend
+        // else the behavior is unpredictable.
+        change_signal_mask(SIG_UNBLOCK);
     }
 }
 
@@ -235,7 +239,7 @@ void sigchld_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     if (WIFEXITED(wstatus)) {               // If child exited.
         deletejob(job_list, pid);
-    } else if (WIFSTOPPED(wstatus)) {      // If child stopped.
+    } else if (WIFSTOPPED(wstatus)) {       // If child stopped.
         struct job_t *stopped_job = getjobpid(job_list, pid);
         stopped_job->state = ST;
     }
@@ -252,13 +256,7 @@ void sigint_handler(int sig) {
     int fg_jid = pid2jid(job_list, fg_pid);
     change_signal_mask(SIG_UNBLOCK);
     Kill(-fg_pid, SIGINT);
-    char *f_str = "Job [%d] (%d) terminated by signal %d\n";
-    char str[MAXLINE];
-    sprintf(str, f_str, fg_jid, fg_pid, sig);
-    Fputs(str, stdout);
-//    change_signal_mask(SIG_BLOCK);
-//    deletejob(job_list, fg_pid);
-//    change_signal_mask(SIG_UNBLOCK);
+    printMsg(fg_jid, fg_pid, sig);
     return;
 }
 
@@ -269,17 +267,27 @@ void sigtstp_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     pid_t fg_pid = fgpid(job_list);
     int fg_jid = pid2jid(job_list, fg_pid);
-//    struct job_t *fg_job = getjobpid(job_list, fg_pid);
-//    fg_job->state = ST;
     change_signal_mask(SIG_UNBLOCK);
     Kill(-fg_pid, SIGTSTP);
-    char *f_str = "Job [%d] (%d) stopped by signal %d\n";
-    char str[MAXLINE];
-    sprintf(str, f_str, fg_jid, fg_pid, sig);
-    Fputs(str, stdout);
+    printMsg(fg_jid, fg_pid, sig);
     return;
 }
 
+void printMsg(int jid, pid_t pid, int sig) {
+    Sio_puts("Job [");
+    Sio_putl(jid);
+    Sio_puts("] (");
+    Sio_putl(pid);
+    Sio_puts(") ");
+    if (sig == SIGINT) {
+        Sio_puts("terminated");
+    } else if (sig == SIGTSTP) {
+        Sio_puts("stopped");
+    }
+    Sio_puts(" by signal ");
+    Sio_putl(sig);
+    Sio_puts("\n");
+}
 
 /*****************
  Built-in Commands
@@ -293,52 +301,6 @@ void jobs() {
     change_signal_mask(SIG_BLOCK);
     listjobs(job_list, STDOUT_FILENO);
     change_signal_mask(SIG_UNBLOCK);
-}
-
-void run_in_fg(const char *cmdline, struct cmdline_tokens *token) {
-    change_signal_mask(SIG_BLOCK);
-    pid_t pid = Fork();
-
-    if (pid == 0) {
-        Setpgid(0, 0);
-        change_signal_mask(SIG_UNBLOCK);
-        restore_signal_defaults();
-        Execve(token->argv[0], token->argv, environ);
-    } else {
-        addjob(job_list, pid, FG, cmdline);
-        change_signal_mask(SIG_UNBLOCK);
-        int wstatus;
-        Waitpid(pid, &wstatus, WUNTRACED);
-        if (WIFEXITED(wstatus)) {      // If child exited.
-            change_signal_mask(SIG_BLOCK);
-            deletejob(job_list, pid);
-            change_signal_mask(SIG_UNBLOCK);
-        }
-    }
-}
-
-void run_in_bg(const char *cmdline, struct cmdline_tokens *token) {
-    change_signal_mask(SIG_BLOCK);
-    pid_t pid = Fork();
-
-    if (pid == 0) {
-        Setpgid(0, 0);
-        change_signal_mask(SIG_UNBLOCK);
-        restore_signal_defaults();
-        Execve(token->argv[0], token->argv, environ);
-    } else {
-        addjob(job_list, pid, BG, cmdline);
-        struct job_t *job = getjobpid(job_list, pid);
-        change_signal_mask(SIG_UNBLOCK);
-        int jid = job->jid;
-
-        char *f_str = "[%d] (%d) %s\n";
-        char str[MAXLINE];
-        sprintf(str, f_str, jid, pid, cmdline);
-        Fputs(str, stdout);
-
-        Waitpid(pid, NULL, WNOHANG);
-    }
 }
 
 sigset_t change_signal_mask(int how) {
