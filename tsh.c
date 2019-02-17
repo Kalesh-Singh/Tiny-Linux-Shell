@@ -209,14 +209,14 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
         Execve(token->argv[0], token->argv, environ);
     } else {
         job_state state;
-        if (parse_result == PARSELINE_FG) {
-            state = FG;
-        } else if (parse_result == PARSELINE_BG) {
+        if (parse_result == PARSELINE_BG) {
             state = BG;
-        }
-        addjob(job_list, pid, state, cmdline);
-
-        if (parse_result == PARSELINE_FG) {
+            addjob(job_list, pid, state, cmdline);
+            int jid = pid2jid(job_list, pid);
+            printf("[%d] (%d) %s\n", jid, pid, cmdline);
+        } else if (parse_result == PARSELINE_FG) {
+            state = FG;
+            addjob(job_list, pid, state, cmdline);
             Sigsuspend(&old_mask);
         }
         // NOTE: The signals must be unblocked AFTER the call to sigsuspend
@@ -234,7 +234,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
  */
 void sigchld_handler(int sig) {
     int wstatus;
-    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED);
+    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED|WNOHANG);
 
     change_signal_mask(SIG_BLOCK);
     if (WIFEXITED(wstatus)) {               // If child exited.
@@ -253,10 +253,12 @@ void sigchld_handler(int sig) {
 void sigint_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     pid_t fg_pid = fgpid(job_list);
-    int fg_jid = pid2jid(job_list, fg_pid);
+    if (fg_pid > 0) {
+        int fg_jid = pid2jid(job_list, fg_pid);
+        Kill(-fg_pid, SIGINT);
+        printMsg(fg_jid, fg_pid, sig);
+    }
     change_signal_mask(SIG_UNBLOCK);
-    Kill(-fg_pid, SIGINT);
-    printMsg(fg_jid, fg_pid, sig);
     return;
 }
 
@@ -266,10 +268,12 @@ void sigint_handler(int sig) {
 void sigtstp_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     pid_t fg_pid = fgpid(job_list);
-    int fg_jid = pid2jid(job_list, fg_pid);
+    if (fg_pid > 0) {
+        int fg_jid = pid2jid(job_list, fg_pid);
+        Kill(-fg_pid, SIGTSTP);
+        printMsg(fg_jid, fg_pid, sig);
+    }
     change_signal_mask(SIG_UNBLOCK);
-    Kill(-fg_pid, SIGTSTP);
-    printMsg(fg_jid, fg_pid, sig);
     return;
 }
 
