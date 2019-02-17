@@ -63,6 +63,8 @@ void jobs();
 //----------------------------------
 
 //-------Foreground and Background Jobs---------
+void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
+
 void run_in_fg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
 void run_in_bg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the background.
 //---------------------------------------------
@@ -174,7 +176,7 @@ void eval(const char *cmdline) {
         case PARSELINE_ERROR:
             return;
         case PARSELINE_BG:
-            run_in_bg(cmdline, &token);
+            run(cmdline, &token, parse_result);
             break;
         case PARSELINE_FG:
             switch (token.builtin) {
@@ -188,12 +190,35 @@ void eval(const char *cmdline) {
                     jobs();
                     break;
                 case BUILTIN_NONE:
-                    run_in_fg(cmdline, &token);
+                    run(cmdline, &token, parse_result);
                     break;
             }
     }
 
     return;
+}
+
+void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
+    sigset_t old_mask = change_signal_mask(SIG_BLOCK);
+    pid_t pid = Fork();
+    if (pid == 0) {
+        Setpgid(0, 0);
+        change_signal_mask(SIG_UNBLOCK);
+        restore_signal_defaults();
+        Execve(token->argv[0], token->argv, environ);
+    } else {
+        job_state state;
+        if (parse_result == PARSELINE_FG) {
+            state = FG;
+        } else if (parse_result == PARSELINE_BG) {
+            state = BG;
+        }
+        addjob(job_list, pid, state, cmdline);
+        change_signal_mask(SIG_UNBLOCK);
+        if (parse_result == PARSELINE_FG) {
+            Sigsuspend(&old_mask);
+        }
+    }
 }
 
 /*****************
@@ -204,6 +229,17 @@ void eval(const char *cmdline) {
  * <What does sigchld_handler do?>
  */
 void sigchld_handler(int sig) {
+    int wstatus;
+    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED);
+
+    change_signal_mask(SIG_BLOCK);
+    if (WIFEXITED(wstatus)) {               // If child exited.
+        deletejob(job_list, pid);
+    } else if (WIFSTOPPED(wstatus)) {      // If child stopped.
+        struct job_t *stopped_job = getjobpid(job_list, pid);
+        stopped_job->state = ST;
+    }
+    change_signal_mask(SIG_UNBLOCK);
     return;
 }
 
@@ -220,9 +256,9 @@ void sigint_handler(int sig) {
     char str[MAXLINE];
     sprintf(str, f_str, fg_jid, fg_pid, sig);
     Fputs(str, stdout);
-    change_signal_mask(SIG_BLOCK);
-    deletejob(job_list, fg_pid);
-    change_signal_mask(SIG_UNBLOCK);
+//    change_signal_mask(SIG_BLOCK);
+//    deletejob(job_list, fg_pid);
+//    change_signal_mask(SIG_UNBLOCK);
     return;
 }
 
@@ -232,13 +268,14 @@ void sigint_handler(int sig) {
 void sigtstp_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     pid_t fg_pid = fgpid(job_list);
-    struct job_t *fg_job = getjobpid(job_list, fg_pid);
-    fg_job->state = ST;
+    int fg_jid = pid2jid(job_list, fg_pid);
+//    struct job_t *fg_job = getjobpid(job_list, fg_pid);
+//    fg_job->state = ST;
     change_signal_mask(SIG_UNBLOCK);
     Kill(-fg_pid, SIGTSTP);
     char *f_str = "Job [%d] (%d) stopped by signal %d\n";
     char str[MAXLINE];
-    sprintf(str, f_str, fg_job->jid, fg_job->pid, sig);
+    sprintf(str, f_str, fg_jid, fg_pid, sig);
     Fputs(str, stdout);
     return;
 }
@@ -272,7 +309,7 @@ void run_in_fg(const char *cmdline, struct cmdline_tokens *token) {
         change_signal_mask(SIG_UNBLOCK);
         int wstatus;
         Waitpid(pid, &wstatus, WUNTRACED);
-        if ( WIFEXITED(wstatus)) {      // If child exited.
+        if (WIFEXITED(wstatus)) {      // If child exited.
             change_signal_mask(SIG_BLOCK);
             deletejob(job_list, pid);
             change_signal_mask(SIG_UNBLOCK);
