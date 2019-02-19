@@ -6,7 +6,8 @@
  */
 
 #include "tsh_helper.h"
-
+#include <string.h>
+#include <stdlib.h>
 /*
  * If DEBUG is defined, enable contracts and printing on dbg_printf.
  */
@@ -60,12 +61,14 @@ void restore_signal_defaults();
 //------- Built In Commands --------
 void quit();        // Terminates the shell process
 void jobs();
+
+void bg(struct cmdline_tokens *tokens);
 //----------------------------------
 
 //-------Foreground and Background Jobs---------
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
 
-void printMsg(int jid, pid_t pid, int sig);
+void printMsg(int jid, pid_t pid, int sig);     // Helper for signal safe output.
 //---------------------------------------------
 
 /*
@@ -184,6 +187,7 @@ void eval(const char *cmdline) {
                 case BUILTIN_FG:
                     break;
                 case BUILTIN_BG:
+                    bg(&token);
                     break;
                 case BUILTIN_JOBS:
                     jobs();
@@ -233,7 +237,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
  */
 void sigchld_handler(int sig) {
     int wstatus;
-    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED);
+    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED|WNOHANG);
 
     change_signal_mask(SIG_BLOCK);
     if (WIFSIGNALED(wstatus)) {
@@ -261,11 +265,8 @@ void sigchld_handler(int sig) {
 void sigint_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     pid_t fg_pid = fgpid(job_list);
-//    deletejob(job_list, fg_pid);         // Modify here in order to tell where the signal originated from.
     if (fg_pid > 0) {
-//        int fg_jid = pid2jid(job_list, fg_pid);
         Kill(-fg_pid, SIGINT);
-//        printMsg(fg_jid, fg_pid, sig);
     }
     change_signal_mask(SIG_UNBLOCK);
     return;
@@ -277,12 +278,8 @@ void sigint_handler(int sig) {
 void sigtstp_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     pid_t fg_pid = fgpid(job_list);
-//    struct job_t *stopped_job = getjobpid(job_list, pid);
-//    stopped_job->state = ST;    // Modify here in order to tell where the signal originated from.
     if (fg_pid > 0) {
-//        int fg_jid = pid2jid(job_list, fg_pid);
         Kill(-fg_pid, SIGTSTP);
-//        printMsg(fg_jid, fg_pid, sig);
     }
     change_signal_mask(SIG_UNBLOCK);
     return;
@@ -317,6 +314,22 @@ void jobs() {
     listjobs(job_list, STDOUT_FILENO);
     change_signal_mask(SIG_UNBLOCK);
 }
+
+void bg(struct cmdline_tokens *tokens) {
+    char* jid_str = tokens->argv[1] + 1;
+    char* ep;
+    int jid = strtol(jid_str, &ep, 10);
+    change_signal_mask(SIG_BLOCK);
+    struct job_t* job = getjobjid(job_list, jid);
+    printf("[%d] (%d) %s\n", jid, job->pid, job->cmdline);
+    if (job->state == ST) {
+        job->state = BG;
+        Kill(job->pid, SIGCONT);
+    }
+    change_signal_mask(SIG_UNBLOCK);
+}
+
+// --------- Helpers -------------------
 
 sigset_t change_signal_mask(int how) {
     sigset_t sig_set;
