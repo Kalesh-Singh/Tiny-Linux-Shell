@@ -64,9 +64,6 @@ void jobs();
 
 //-------Foreground and Background Jobs---------
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
-
-void run_in_fg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
-void run_in_bg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the background.
 void printMsg(int jid, pid_t pid, int sig);
 //---------------------------------------------
 
@@ -238,6 +235,14 @@ void sigchld_handler(int sig) {
     pid_t pid = Waitpid(-1, &wstatus, WUNTRACED);
 
     change_signal_mask(SIG_BLOCK);
+    if (WIFSIGNALED(wstatus)) {
+        int sig = WTERMSIG(wstatus);
+        pid_t fg_pid = fgpid(job_list);
+        if (pid != fg_pid) {
+            int jid = pid2jid(job_list, pid);
+            printMsg(jid, pid, sig);
+        }
+    }
     if (WIFEXITED(wstatus)) {               // If child exited.
         deletejob(job_list, pid);
     } else if (WIFSTOPPED(wstatus)) {       // If child stopped.
