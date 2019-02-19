@@ -64,6 +64,7 @@ void jobs();
 
 //-------Foreground and Background Jobs---------
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
+
 void printMsg(int jid, pid_t pid, int sig);
 //---------------------------------------------
 
@@ -237,8 +238,7 @@ void sigchld_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     if (WIFSIGNALED(wstatus)) {
         int sig = WTERMSIG(wstatus);
-        pid_t fg_pid = fgpid(job_list);
-        if (pid != fg_pid) {
+        if (sig == SIGINT) {
             int jid = pid2jid(job_list, pid);
             printMsg(jid, pid, sig);
         }
@@ -248,6 +248,7 @@ void sigchld_handler(int sig) {
     } else if (WIFSTOPPED(wstatus)) {       // If child stopped.
         struct job_t *stopped_job = getjobpid(job_list, pid);
         stopped_job->state = ST;
+        printMsg(stopped_job->jid, stopped_job->pid, SIGTSTP);
     }
     change_signal_mask(SIG_UNBLOCK);
     return;
@@ -259,10 +260,11 @@ void sigchld_handler(int sig) {
 void sigint_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     pid_t fg_pid = fgpid(job_list);
+//    deletejob(job_list, fg_pid);         // Modify here in order to tell where the signal originated from.
     if (fg_pid > 0) {
-        int fg_jid = pid2jid(job_list, fg_pid);
+//        int fg_jid = pid2jid(job_list, fg_pid);
         Kill(-fg_pid, SIGINT);
-        printMsg(fg_jid, fg_pid, sig);
+//        printMsg(fg_jid, fg_pid, sig);
     }
     change_signal_mask(SIG_UNBLOCK);
     return;
@@ -274,10 +276,12 @@ void sigint_handler(int sig) {
 void sigtstp_handler(int sig) {
     change_signal_mask(SIG_BLOCK);
     pid_t fg_pid = fgpid(job_list);
+//    struct job_t *stopped_job = getjobpid(job_list, pid);
+//    stopped_job->state = ST;    // Modify here in order to tell where the signal originated from.
     if (fg_pid > 0) {
-        int fg_jid = pid2jid(job_list, fg_pid);
+//        int fg_jid = pid2jid(job_list, fg_pid);
         Kill(-fg_pid, SIGTSTP);
-        printMsg(fg_jid, fg_pid, sig);
+//        printMsg(fg_jid, fg_pid, sig);
     }
     change_signal_mask(SIG_UNBLOCK);
     return;
