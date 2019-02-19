@@ -241,6 +241,7 @@ void sigchld_handler(int sig) {
         if (sig == SIGINT) {
             int jid = pid2jid(job_list, pid);
             printMsg(jid, pid, sig);
+            deletejob(job_list, pid);
         }
     }
     if (WIFEXITED(wstatus)) {               // If child exited.
