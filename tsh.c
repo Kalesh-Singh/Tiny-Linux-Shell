@@ -6,8 +6,9 @@
  */
 
 #include "tsh_helper.h"
-#include <string.h>
-#include <stdlib.h>
+#include "utilities.h"
+#include "shell_sighandlers.h"
+#include "builtin.h"
 /*
  * If DEBUG is defined, enable contracts and printing on dbg_printf.
  */
@@ -28,47 +29,15 @@
 /* Function prototypes */
 void eval(const char *cmdline);
 
-void sigchld_handler(int sig);
 
-void sigtstp_handler(int sig);
-
-void sigint_handler(int sig);
-
-void sigquit_handler(int sig);
-
-// ------- Signals ----------
-/* Blocks and unblocks the signal set:
- * { SIGCHLD, SIGINT, SIGTSTP }
- *
- * how - expects one of the following arguments.
- *  SIG_BLOCK
- *      The set of blocked signals is the union of the current
- *      set and the set argument.
- *  SIG_UNBLOCK
- *      The signals in set are removed from the current set of
- *      blocked signals.  It is permissible to attempt to unblock
- *      a signal which is  not blocked.
- *  Return Value:
- *      The old mask. */
-sigset_t change_signal_mask(int how);
-
-/* Restores the signals:
- *  {SIGCHLD, SIGINT, SIGTSTP, SIGQUIT }
- *  to their default behaviors. */
-void restore_signal_defaults();
-//----------------------------------------
 
 //------- Built In Commands --------
-void quit();        // Terminates the shell process
-void jobs();
 
-void bg(struct cmdline_tokens *tokens);
 //----------------------------------
 
 //-------Foreground and Background Jobs---------
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
 
-void printMsg(int jid, pid_t pid, int sig);     // Helper for signal safe output.
 //---------------------------------------------
 
 /*
@@ -232,119 +201,16 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
  * Signal handlers
  *****************/
 
-/* 
- * <What does sigchld_handler do?>
- */
-void sigchld_handler(int sig) {
-    int wstatus;
-    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED|WNOHANG);
 
-    change_signal_mask(SIG_BLOCK);
-    if (WIFSIGNALED(wstatus)) {
-        int sig = WTERMSIG(wstatus);
-        if (sig == SIGINT) {
-            int jid = pid2jid(job_list, pid);
-            printMsg(jid, pid, sig);
-            deletejob(job_list, pid);
-        }
-    }
-    if (WIFEXITED(wstatus)) {               // If child exited.
-        deletejob(job_list, pid);
-    } else if (WIFSTOPPED(wstatus)) {       // If child stopped.
-        struct job_t *stopped_job = getjobpid(job_list, pid);
-        stopped_job->state = ST;
-        printMsg(stopped_job->jid, stopped_job->pid, SIGTSTP);
-    }
-    change_signal_mask(SIG_UNBLOCK);
-    return;
-}
 
-/* 
- * <What does sigint_handler do?>
- */
-void sigint_handler(int sig) {
-    change_signal_mask(SIG_BLOCK);
-    pid_t fg_pid = fgpid(job_list);
-    if (fg_pid > 0) {
-        Kill(-fg_pid, SIGINT);
-    }
-    change_signal_mask(SIG_UNBLOCK);
-    return;
-}
 
-/*
- * <What does sigtstp_handler do?>
- */
-void sigtstp_handler(int sig) {
-    change_signal_mask(SIG_BLOCK);
-    pid_t fg_pid = fgpid(job_list);
-    if (fg_pid > 0) {
-        Kill(-fg_pid, SIGTSTP);
-    }
-    change_signal_mask(SIG_UNBLOCK);
-    return;
-}
-
-void printMsg(int jid, pid_t pid, int sig) {
-    Sio_puts("Job [");
-    Sio_putl(jid);
-    Sio_puts("] (");
-    Sio_putl(pid);
-    Sio_puts(") ");
-    if (sig == SIGINT) {
-        Sio_puts("terminated");
-    } else if (sig == SIGTSTP) {
-        Sio_puts("stopped");
-    }
-    Sio_puts(" by signal ");
-    Sio_putl(sig);
-    Sio_puts("\n");
-}
 
 /*****************
  Built-in Commands
  *****************/
 
-void quit() {
-    exit(0);
-}
 
-void jobs() {
-    change_signal_mask(SIG_BLOCK);
-    listjobs(job_list, STDOUT_FILENO);
-    change_signal_mask(SIG_UNBLOCK);
-}
-
-void bg(struct cmdline_tokens *tokens) {
-    char* jid_str = tokens->argv[1] + 1;
-    char* ep;
-    int jid = strtol(jid_str, &ep, 10);
-    change_signal_mask(SIG_BLOCK);
-    struct job_t* job = getjobjid(job_list, jid);
-    printf("[%d] (%d) %s\n", jid, job->pid, job->cmdline);
-    if (job->state == ST) {
-        job->state = BG;
-        Kill(job->pid, SIGCONT);
-    }
-    change_signal_mask(SIG_UNBLOCK);
-}
 
 // --------- Helpers -------------------
 
-sigset_t change_signal_mask(int how) {
-    sigset_t sig_set;
-    sigset_t old_set;
-    Sigemptyset(&sig_set);
-    Sigaddset(&sig_set, SIGCHLD);
-    Sigaddset(&sig_set, SIGINT);
-    Sigaddset(&sig_set, SIGTSTP);
-    Sigprocmask(how, &sig_set, &old_set);
-    return old_set;
-}
 
-void restore_signal_defaults() {
-    Signal(SIGCHLD, SIG_DFL);
-    Signal(SIGINT, SIG_DFL);
-    Signal(SIGTSTP, SIG_DFL);
-    Signal(SIGQUIT, SIG_DFL);
-}
