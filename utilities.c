@@ -35,5 +35,4 @@ void restore_signal_defaults() {
     Signal(SIGCHLD, SIG_DFL);
     Signal(SIGINT, SIG_DFL);
     Signal(SIGTSTP, SIG_DFL);
-    Signal(SIGQUIT, SIG_DFL);
 }

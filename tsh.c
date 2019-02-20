@@ -9,6 +9,7 @@
 #include "utilities.h"
 #include "shell_sighandlers.h"
 #include "builtin.h"
+
 /*
  * If DEBUG is defined, enable contracts and printing on dbg_printf.
  */
@@ -29,16 +30,7 @@
 /* Function prototypes */
 void eval(const char *cmdline);
 
-
-
-//------- Built In Commands --------
-
-//----------------------------------
-
-//-------Foreground and Background Jobs---------
-void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
-
-//---------------------------------------------
+void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result, sigset_t *ourmask);
 
 /*
  * <Write main's function header documentation. What does main do?>
@@ -77,6 +69,7 @@ int main(int argc, char **argv) {
     Signal(SIGINT, sigint_handler);   // Handles ctrl-c
     Signal(SIGTSTP, sigtstp_handler);  // Handles ctrl-z
     Signal(SIGCHLD, sigchld_handler);  // Handles terminated or stopped child
+    Signal(SIGUSR1, sigusr1_handler);   // To determine whether a fg job triggered sigchld_handler
 
     Signal(SIGTTIN, SIG_IGN);
     Signal(SIGTTOU, SIG_IGN);
@@ -135,9 +128,10 @@ int main(int argc, char **argv) {
 void eval(const char *cmdline) {
     parseline_return parse_result;
     struct cmdline_tokens token;
+
     sigset_t ourmask;
-    // TODO: remove the line below! It's only here to keep the compiler happy
     Sigemptyset(&ourmask);
+    Sigaddset(&ourmask, SIGUSR1);
 
     // Parse command line
     parse_result = parseline(cmdline, &token);
@@ -147,7 +141,7 @@ void eval(const char *cmdline) {
         case PARSELINE_ERROR:
             return;
         case PARSELINE_BG:
-            run(cmdline, &token, parse_result);
+            run(cmdline, &token, parse_result, &ourmask);
             break;
         case PARSELINE_FG:
             switch (token.builtin) {
@@ -162,7 +156,7 @@ void eval(const char *cmdline) {
                     jobs();
                     break;
                 case BUILTIN_NONE:
-                    run(cmdline, &token, parse_result);
+                    run(cmdline, &token, parse_result, &ourmask);
                     break;
             }
     }
@@ -170,9 +164,8 @@ void eval(const char *cmdline) {
     return;
 }
 
-void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
-    change_signal_mask(SIG_UNBLOCK);
-    sigset_t old_mask = change_signal_mask(SIG_BLOCK);
+void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result, sigset_t *ourmask) {
+    change_signal_mask(SIG_BLOCK);
     pid_t pid = Fork();
     if (pid == 0) {
         Setpgid(0, 0);
@@ -189,28 +182,10 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
         } else if (parse_result == PARSELINE_FG) {
             state = FG;
             addjob(job_list, pid, state, cmdline);
-            Sigsuspend(&old_mask);
+            Sigsuspend(ourmask);
         }
         // NOTE: The signals must be unblocked AFTER the call to sigsuspend
         // else the behavior is unpredictable.
         change_signal_mask(SIG_UNBLOCK);
     }
 }
-
-/*****************
- * Signal handlers
- *****************/
-
-
-
-
-
-/*****************
- Built-in Commands
- *****************/
-
-
-
-// --------- Helpers -------------------
-
-

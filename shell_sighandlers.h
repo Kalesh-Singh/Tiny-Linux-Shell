@@ -16,4 +16,6 @@ void sigint_handler(int sig);
 
 void sigquit_handler(int sig);
 
+void sigusr1_handler(int sig);
+
 #endif //TINY_LINUX_SHELL_SHELL_SIGHANDLERS_H
