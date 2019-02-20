@@ -8,10 +8,10 @@
 #include "tsh_helper.h"
 #include "utilities.h"
 #include <stdlib.h>
-#include <string.h>
 
 void quit();        // Terminates the shell process
 void jobs();
 void bg(struct cmdline_tokens *tokens);
+void fg(struct cmdline_tokens *tokens);
 
 #endif //TINY_LINUX_SHELL_BUILTIN_H

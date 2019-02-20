@@ -148,6 +148,7 @@ void eval(const char *cmdline) {
                 case BUILTIN_QUIT:
                     quit();
                 case BUILTIN_FG:
+                    fg(&token);
                     break;
                 case BUILTIN_BG:
                     bg(&token);

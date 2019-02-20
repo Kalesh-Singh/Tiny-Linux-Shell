@@ -36,3 +36,9 @@ void restore_signal_defaults() {
     Signal(SIGINT, SIG_DFL);
     Signal(SIGTSTP, SIG_DFL);
 }
+
+int cmdjid_to_int(char* cmdjid) {
+    char* jid_str = cmdjid + 1;
+    char* ep;
+    return strtol(jid_str, &ep, 10);
+}

@@ -6,6 +6,7 @@
 #define TINY_LINUX_SHELL_UTILITIES_H
 
 #include "tsh_helper.h"
+#include <string.h>
 
 /* Blocks and unblocks the signal set:
  * { SIGCHLD, SIGINT, SIGTSTP }
@@ -28,5 +29,7 @@ sigset_t change_signal_mask(int how);
 void restore_signal_defaults();
 
 void printMsg(int jid, pid_t pid, int sig);     // Helper for signal safe output.
+
+int cmdjid_to_int(char* cmdjid); // Converts cmd jid arg to int.
 
 #endif //TINY_LINUX_SHELL_UTILITIES_H
