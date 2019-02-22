@@ -30,7 +30,7 @@
 /* Function prototypes */
 void eval(const char *cmdline);
 
-void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result, sigset_t *ourmask);
+void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
 
 /*
  * <Write main's function header documentation. What does main do?>
@@ -40,6 +40,8 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
  *  any pertinent side effects, and any assumptions that the function makes."
  */
 int main(int argc, char **argv) {
+    setup_masks();      // Set up the fg_interrupt_mask and the job_control masks.
+
     char c;
     char cmdline[MAXLINE_TSH];  // Cmdline for fgets
     bool emit_prompt = true;    // Emit prompt (default)
@@ -129,10 +131,6 @@ void eval(const char *cmdline) {
     parseline_return parse_result;
     struct cmdline_tokens token;
 
-    sigset_t ourmask;
-    Sigemptyset(&ourmask);
-    Sigaddset(&ourmask, SIGUSR1);
-
     // Parse command line
     parse_result = parseline(cmdline, &token);
 
@@ -141,7 +139,7 @@ void eval(const char *cmdline) {
         case PARSELINE_ERROR:
             return;
         case PARSELINE_BG:
-            run(cmdline, &token, parse_result, &ourmask);
+            run(cmdline, &token, parse_result);
             break;
         case PARSELINE_FG:
             switch (token.builtin) {
@@ -157,7 +155,7 @@ void eval(const char *cmdline) {
                     jobs();
                     break;
                 case BUILTIN_NONE:
-                    run(cmdline, &token, parse_result, &ourmask);
+                    run(cmdline, &token, parse_result);
                     break;
             }
     }
@@ -165,7 +163,7 @@ void eval(const char *cmdline) {
     return;
 }
 
-void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result, sigset_t *ourmask) {
+void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
     change_signal_mask(SIG_BLOCK);
     pid_t pid = Fork();
     if (pid == 0) {
@@ -178,15 +176,33 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
         if (parse_result == PARSELINE_BG) {
             state = BG;
             addjob(job_list, pid, state, cmdline);
+            change_signal_mask(SIG_UNBLOCK);
             int jid = pid2jid(job_list, pid);
             printf("[%d] (%d) %s\n", jid, pid, cmdline);
         } else if (parse_result == PARSELINE_FG) {
+            fg_interrupt = 0;                                   // Reset fg_interrupt
             state = FG;
             addjob(job_list, pid, state, cmdline);
-            Sigsuspend(ourmask);
+            change_signal_mask(SIG_UNBLOCK);
+
+            sigset_t old_mask;
+
+            Sigprocmask(SIG_UNBLOCK, &fg_interrupt_set, NULL);    // Unblock CHLD, INT and TSTP
+            Sigprocmask(SIG_BLOCK, &fg_interrupt_set, &old_mask); // Block USR1
+            Sigsuspend(&old_mask);                                // Wait for CHLD, INT or TSTP
+
+            Sigprocmask(SIG_UNBLOCK, &fg_interrupt_set, NULL);    // Unblock USR1
+            old_mask = change_signal_mask(SIG_BLOCK);             // Block CHLD, INT and TSTP
+
+            while (!fg_interrupt) {
+                Sigsuspend(&old_mask);
+            }
+
+            Sigprocmask(SIG_BLOCK, &fg_interrupt_set, NULL);        // Block USR1
+            old_mask = change_signal_mask(SIG_UNBLOCK);             // Unblock CHLD, INT and TSTP
+
         }
         // NOTE: The signals must be unblocked AFTER the call to sigsuspend
         // else the behavior is unpredictable.
-        change_signal_mask(SIG_UNBLOCK);
     }
 }

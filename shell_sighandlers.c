@@ -69,5 +69,6 @@ void sigtstp_handler(int sig) {
  * <What does  the sigusr1_handler do?>
  */
 void sigusr1_handler(int sig) {
+    fg_interrupt = 1;
     return;
 }
