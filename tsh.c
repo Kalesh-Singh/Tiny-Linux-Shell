@@ -180,6 +180,8 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
             int jid = pid2jid(job_list, pid);
             printf("[%d] (%d) %s\n", jid, pid, cmdline);
         } else if (parse_result == PARSELINE_FG) {
+
+            // TODO: NOTE: KEEP THE SIGNALS BLOCKED UNTIL SIGSUSPEND ELSE PROBLEMS
             fg_interrupt = 0;                                   // Reset fg_interrupt
             state = FG;
             addjob(job_list, pid, state, cmdline);
