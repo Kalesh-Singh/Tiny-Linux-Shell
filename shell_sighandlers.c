@@ -13,6 +13,7 @@ void sigchld_handler(int sig) {
 
     if (pid > 0) {
         change_signal_mask(SIG_BLOCK);
+        pid_t fg_pid = fgpid(job_list);     // Signal sigsuspend to return if the fg process changed state.
         if (WIFSIGNALED(wstatus)) {         // Child terminated by a signal
             int sig = WTERMSIG(wstatus);
             int jid = pid2jid(job_list, pid);
@@ -28,7 +29,6 @@ void sigchld_handler(int sig) {
             printMsg(stopped_job->jid, stopped_job->pid, sig);
         }
         if (WIFSIGNALED(wstatus) || WIFEXITED(wstatus) || WIFSTOPPED(wstatus)) {
-            pid_t fg_pid = fgpid(job_list);     // Signal sigsuspend to return if the fg process changed state.
             if (pid == fg_pid) {
                 raise(SIGUSR1);
             }
