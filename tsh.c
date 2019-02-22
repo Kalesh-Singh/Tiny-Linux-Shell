@@ -131,7 +131,7 @@ void eval(const char *cmdline) {
 
     sigset_t ourmask;
     Sigemptyset(&ourmask);
-    Sigaddset(&ourmask, SIGCHLD);
+    Sigaddset(&ourmask, SIGUSR1);
 
     // Parse command line
     parse_result = parseline(cmdline, &token);

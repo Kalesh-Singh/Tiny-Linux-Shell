@@ -9,7 +9,7 @@
  */
 void sigchld_handler(int sig) {
     int wstatus;
-    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED | WNOHANG);
+    pid_t pid = Waitpid(-1, &wstatus, WUNTRACED);
 
     if (pid > 0) {
         change_signal_mask(SIG_BLOCK);
