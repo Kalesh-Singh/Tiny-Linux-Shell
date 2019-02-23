@@ -31,14 +31,81 @@ sigset_t change_signal_mask(int how) {
     return old_set;
 }
 
-void restore_signal_defaults() {
-    Signal(SIGCHLD, SIG_DFL);
-    Signal(SIGINT, SIG_DFL);
-    Signal(SIGTSTP, SIG_DFL);
-}
-
 int cmdjid_to_int(char* cmdjid) {
     char* jid_str = cmdjid + 1;
     char* ep;
     return strtol(jid_str, &ep, 10);
+}
+
+sigset_t create_mask(int argc, ...) {
+    va_list sigs;
+    va_start(sigs, argc);
+    sigset_t mask;
+    Sigemptyset(&mask);
+#ifdef DEBUG
+    printf("Mask created: ");
+#endif
+    for (int i = 0; i < argc; i++) {
+        int sig = va_arg(sigs, int);
+#ifdef DEBUG
+        switch(sig) {
+            case 2:
+                printf("%10s", "SIGINT");
+                break;
+            case 20:
+                printf("%10s", "SIGTSTP");
+                break;
+            case 17:
+                printf("%10s", "SIGCHLD");
+                break;
+            case 10:
+                printf("%10s", "SIGUSR1");
+                break;
+            default:
+                printf("%10s", "UNKNOWN");
+                break;
+        }
+#endif
+        Sigaddset(&mask, sig);
+    }
+    va_end(sigs);
+#ifdef DEBUG
+    printf("\n\n");
+#endif
+    return mask;
+}
+
+void restore_signal_defaults(int argc, ...) {
+    va_list sigs;
+    va_start(sigs, argc);
+#ifdef DEBUG
+    printf("Restored to defaults: ");
+#endif
+    for (int i = 0; i < argc; i++) {
+        int sig = va_arg(sigs, int);
+ #ifdef DEBUG
+        switch(sig) {
+            case 2:
+                printf("%10s", "SIGINT");
+                break;
+            case 20:
+                printf("%10s", "SIGTSTP");
+                break;
+            case 17:
+                printf("%10s", "SIGCHLD");
+                break;
+            case 10:
+                printf("%10s", "SIGUSR1");
+                break;
+            default:
+                printf("%10s", "UNKNOWN");
+                break;
+        }
+ #endif
+        Signal(sig, SIG_DFL);
+    }
+    va_end(sigs);
+#ifdef DEBUG
+    printf("\n\n");
+#endif
 }

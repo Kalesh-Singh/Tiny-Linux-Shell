@@ -164,45 +164,40 @@ void eval(const char *cmdline) {
 }
 
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
-    change_signal_mask(SIG_BLOCK);
+    sigset_t old_mask;       // SIGINT, SIGTSTP, SIGCHLD and SIGUSR1 Unblocked
+    sigset_t mask1 = create_mask(3, SIGINT, SIGTSTP, SIGCHLD);
+    Sigprocmask(SIG_BLOCK, &mask1, &old_mask);
+    sigset_t fg_mask;       // SIGINT, SIGTSTP, SIGCHLD Blocked but SIGUSR1 Unblocked
+    sigset_t mask2 = create_mask(1, SIGUSR1);
+    Sigprocmask(SIG_BLOCK, &mask2, &fg_mask);
+    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+
     pid_t pid = Fork();
-    if (pid == 0) {
+    if (pid == 0) {         // Child process
         Setpgid(0, 0);
-        change_signal_mask(SIG_UNBLOCK);
-        restore_signal_defaults();
+        restore_signal_defaults(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+        Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
         Execve(token->argv[0], token->argv, environ);
-    } else {
+    } else {                // Parent process
         job_state state;
         if (parse_result == PARSELINE_BG) {
             state = BG;
             addjob(job_list, pid, state, cmdline);
-            change_signal_mask(SIG_UNBLOCK);
             int jid = pid2jid(job_list, pid);
             printf("[%d] (%d) %s\n", jid, pid, cmdline);
+            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
         } else if (parse_result == PARSELINE_FG) {
-
-            // TODO: NOTE: KEEP THE SIGNALS BLOCKED UNTIL SIGSUSPEND ELSE PROBLEMS
-            fg_interrupt = 0;                                   // Reset fg_interrupt
+            fg_interrupt = 0;                   // Reset fg_interrupt
             state = FG;
             addjob(job_list, pid, state, cmdline);
-            change_signal_mask(SIG_UNBLOCK);
 
-            sigset_t old_mask;
-
-            Sigprocmask(SIG_UNBLOCK, &fg_interrupt_set, NULL);    // Unblock CHLD, INT and TSTP
-            Sigprocmask(SIG_BLOCK, &fg_interrupt_set, &old_mask); // Block USR1
-            Sigsuspend(&old_mask);                                // Wait for CHLD, INT or TSTP
-
-            Sigprocmask(SIG_UNBLOCK, &fg_interrupt_set, NULL);    // Unblock USR1
-            old_mask = change_signal_mask(SIG_BLOCK);             // Block CHLD, INT and TSTP
+            Sigsuspend(&old_mask);              // Wait for CHLD, INT or TSTP
 
             while (!fg_interrupt) {
-                Sigsuspend(&old_mask);
+                Sigsuspend(&fg_mask);           // Wait for SIGUSR1
             }
 
-            Sigprocmask(SIG_BLOCK, &fg_interrupt_set, NULL);        // Block USR1
-            old_mask = change_signal_mask(SIG_UNBLOCK);             // Unblock CHLD, INT and TSTP
-
+            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
         }
         // NOTE: The signals must be unblocked AFTER the call to sigsuspend
         // else the behavior is unpredictable.
