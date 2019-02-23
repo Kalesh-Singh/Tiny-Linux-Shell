@@ -4,39 +4,6 @@
 
 #include "utilities.h"
 
-void printMsg(int jid, pid_t pid, int sig) {
-    Sio_puts("Job [");
-    Sio_putl(jid);
-    Sio_puts("] (");
-    Sio_putl(pid);
-    Sio_puts(") ");
-    if (sig == SIGINT) {
-        Sio_puts("terminated");
-    } else if (sig == SIGTSTP) {
-        Sio_puts("stopped");
-    }
-    Sio_puts(" by signal ");
-    Sio_putl(sig);
-    Sio_puts("\n");
-}
-
-sigset_t change_signal_mask(int how) {
-    sigset_t sig_set;
-    sigset_t old_set;
-    Sigemptyset(&sig_set);
-    Sigaddset(&sig_set, SIGCHLD);
-    Sigaddset(&sig_set, SIGINT);
-    Sigaddset(&sig_set, SIGTSTP);
-    Sigprocmask(how, &sig_set, &old_set);
-    return old_set;
-}
-
-int cmdjid_to_int(char* cmdjid) {
-    char* jid_str = cmdjid + 1;
-    char* ep;
-    return strtol(jid_str, &ep, 10);
-}
-
 sigset_t create_mask(int argc, ...) {
     va_list sigs;
     va_start(sigs, argc);
@@ -108,4 +75,26 @@ void restore_signal_defaults(int argc, ...) {
 #ifdef DEBUG
     printf("\n\n");
 #endif
+}
+
+void printMsg(int jid, pid_t pid, int sig) {
+    Sio_puts("Job [");
+    Sio_putl(jid);
+    Sio_puts("] (");
+    Sio_putl(pid);
+    Sio_puts(") ");
+    if (sig == SIGINT) {
+        Sio_puts("terminated");
+    } else if (sig == SIGTSTP) {
+        Sio_puts("stopped");
+    }
+    Sio_puts(" by signal ");
+    Sio_putl(sig);
+    Sio_puts("\n");
+}
+
+int cmdjid_to_int(char* cmdjid) {
+    char* jid_str = cmdjid + 1;
+    char* ep;
+    return strtol(jid_str, &ep, 10);
 }

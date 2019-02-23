@@ -9,26 +9,29 @@ void quit() {
 }
 
 void jobs() {
-    change_signal_mask(SIG_BLOCK);
+    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     listjobs(job_list, STDOUT_FILENO);
-    change_signal_mask(SIG_UNBLOCK);
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
 }
 
 void bg(struct cmdline_tokens *tokens) {
+    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     int jid = cmdjid_to_int(tokens->argv[1]);
-    change_signal_mask(SIG_BLOCK);
     struct job_t *job = getjobjid(job_list, jid);
     printf("[%d] (%d) %s\n", jid, job->pid, job->cmdline);
     if (job != NULL &&job->state == ST) {
         job->state = BG;
         Kill(job->pid, SIGCONT);
     }
-    change_signal_mask(SIG_UNBLOCK);
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
 }
 
 void fg(struct cmdline_tokens *tokens) {
+    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     int jid = cmdjid_to_int(tokens->argv[1]);
-    change_signal_mask(SIG_BLOCK);
     struct job_t *job = getjobjid(job_list, jid);
     if (job != NULL && (job->state == ST || job->state == BG)) {
         if (job->state == ST) {
@@ -43,6 +46,6 @@ void fg(struct cmdline_tokens *tokens) {
 
         Sigsuspend(&ourmask);
     }
-    change_signal_mask(SIG_UNBLOCK);
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }

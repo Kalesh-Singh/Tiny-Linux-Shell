@@ -8,11 +8,12 @@
  * <What does sigchld_handler do?>
  */
 void sigchld_handler(int sig) {
+    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     int wstatus;
     pid_t pid = Waitpid(-1, &wstatus, WUNTRACED);
 
     if (pid > 0) {
-        change_signal_mask(SIG_BLOCK);
         pid_t fg_pid = fgpid(job_list);     // Signal sigsuspend to return if the fg process changed state.
         if (WIFSIGNALED(wstatus)) {         // Child terminated by a signal
             int sig = WTERMSIG(wstatus);
@@ -33,8 +34,8 @@ void sigchld_handler(int sig) {
                 raise(SIGUSR1);
             }
         }
-        change_signal_mask(SIG_UNBLOCK);
     }
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }
 
@@ -42,12 +43,14 @@ void sigchld_handler(int sig) {
  * <What does sigint_handler do?>
  */
 void sigint_handler(int sig) {
-    change_signal_mask(SIG_BLOCK);
+    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
+
     pid_t fg_pid = fgpid(job_list);
     if (fg_pid > 0) {
         Kill(-fg_pid, sig);
     }
-    change_signal_mask(SIG_UNBLOCK);
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }
 
@@ -55,12 +58,14 @@ void sigint_handler(int sig) {
  * <What does sigtstp_handler do?>
  */
 void sigtstp_handler(int sig) {
-    change_signal_mask(SIG_BLOCK);
+    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
+
     pid_t fg_pid = fgpid(job_list);
     if (fg_pid > 0) {
         Kill(-fg_pid, sig);
     }
-    change_signal_mask(SIG_UNBLOCK);
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }
 
@@ -69,6 +74,9 @@ void sigtstp_handler(int sig) {
  * <What does  the sigusr1_handler do?>
  */
 void sigusr1_handler(int sig) {
+    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     fg_interrupt = 1;
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }

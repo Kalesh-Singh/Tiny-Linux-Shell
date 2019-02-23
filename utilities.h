@@ -11,30 +11,19 @@
 #include <string.h>
 #include <stdarg.h>
 
-/* Blocks and unblocks the signal set:
- * { SIGCHLD, SIGINT, SIGTSTP }
- *
- * how - expects one of the following arguments.
- *  SIG_BLOCK
- *      The set of blocked signals is the union of the current
- *      set and the set argument.
- *  SIG_UNBLOCK
- *      The signals in set are removed from the current set of
- *      blocked signals.  It is permissible to attempt to unblock
- *      a signal which is  not blocked.
- *  Return Value:
- *      The old mask. */
-sigset_t change_signal_mask(int how);
 
-/* Restores the signals:
- *  {SIGCHLD, SIGINT, SIGTSTP, SIGQUIT }
- *  to their default behaviors. */
+
+/* Restores the signals (...) to their default behaviors. */
 void restore_signal_defaults(int argc, ...);
 
-void printMsg(int jid, pid_t pid, int sig);     // Helper for signal safe output.
-
-int cmdjid_to_int(char* cmdjid); // Converts cmd jid arg to int.
-
+/* Creates a signal set of the signals passed in the arguments */
 sigset_t create_mask(int argc, ...);
+
+
+/* Helper function for signal safe output messages */
+void printMsg(int jid, pid_t pid, int sig);
+
+/* Converts cmd jid arguments to integers */
+int cmdjid_to_int(char* cmdjid);
 
 #endif //TINY_LINUX_SHELL_UTILITIES_H
