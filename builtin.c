@@ -9,14 +9,12 @@ void quit() {
 }
 
 void jobs() {
-    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     listjobs(job_list, STDOUT_FILENO);
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
 }
 
 void bg(struct cmdline_tokens *tokens) {
-    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     int jid = cmdjid_to_int(tokens->argv[1]);
     struct job_t *job = getjobjid(job_list, jid);
@@ -29,7 +27,6 @@ void bg(struct cmdline_tokens *tokens) {
 }
 
 void fg(struct cmdline_tokens *tokens) {
-    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     int jid = cmdjid_to_int(tokens->argv[1]);
     struct job_t *job = getjobjid(job_list, jid);

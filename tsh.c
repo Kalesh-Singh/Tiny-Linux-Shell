@@ -7,7 +7,7 @@
 
 #include "tsh_helper.h"
 #include "utilities.h"
-#include "shell_sighandlers.h"
+#include "sighandlers.h"
 #include "builtin.h"
 
 /*
@@ -40,7 +40,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
  *  any pertinent side effects, and any assumptions that the function makes."
  */
 int main(int argc, char **argv) {
-    setup_masks();      // Set up the fg_interrupt_mask and the job_control masks.
+    job_control_mask = create_mask(4, SIGINT, SIGCHLD, SIGTSTP, SIGUSR1);   // Create job control mask.
 
     char c;
     char cmdline[MAXLINE_TSH];  // Cmdline for fgets
@@ -165,18 +165,13 @@ void eval(const char *cmdline) {
 
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
     sigset_t old_mask;       // SIGINT, SIGTSTP, SIGCHLD and SIGUSR1 Unblocked
-    sigset_t mask1 = create_mask(3, SIGINT, SIGTSTP, SIGCHLD);
-    Sigprocmask(SIG_BLOCK, &mask1, &old_mask);
-    sigset_t fg_mask;       // SIGINT, SIGTSTP, SIGCHLD Blocked but SIGUSR1 Unblocked
-    sigset_t mask2 = create_mask(1, SIGUSR1);
-    Sigprocmask(SIG_BLOCK, &mask2, &fg_mask);
-    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+    Sigprocmask(SIG_BLOCK, &job_control_mask, &old_mask);
 
     pid_t pid = Fork();
     if (pid == 0) {         // Child process
         Setpgid(0, 0);
-        restore_signal_defaults(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
         Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
+        restore_signal_defaults(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
         Execve(token->argv[0], token->argv, environ);
     } else {                // Parent process
         job_state state;
@@ -190,13 +185,15 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
             fg_interrupt = 0;                   // Reset fg_interrupt
             state = FG;
             addjob(job_list, pid, state, cmdline);
-
-            Sigsuspend(&old_mask);              // Wait for CHLD, INT or TSTP
-
+#ifdef DEBUG
+            printf("Before Sigsuspend\n");
+#endif
             while (!fg_interrupt) {
-                Sigsuspend(&fg_mask);           // Wait for SIGUSR1
+                Sigsuspend(&old_mask);
             }
-
+#ifdef DEBUG
+            printf("Before Sigsuspend\n");
+#endif
             Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
         }
         // NOTE: The signals must be unblocked AFTER the call to sigsuspend

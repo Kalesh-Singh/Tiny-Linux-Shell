@@ -2,13 +2,34 @@
 // Created by kalesh on 2/19/19.
 //
 
-#include "shell_sighandlers.h"
+#include "sighandlers.h"
+
+void debugPrint(int sig) {
+    Sio_puts("\nHANDLER: ");
+    switch (sig) {
+        case 2:
+            Sio_puts("sigint_handler");
+            break;
+        case 10:
+            Sio_puts("sigusr1_handler");
+            break;
+        case 17:
+            Sio_puts("sigchld_handler");
+            break;
+        case 20:
+            Sio_puts("sigtstp_handler");
+            break;
+    }
+    Sio_puts(" called.\n\n");
+}
 
 /*
  * <What does sigchld_handler do?>
  */
 void sigchld_handler(int sig) {
-    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+#ifdef DEBUG
+    debugPrint(sig);
+#endif
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     int wstatus;
     pid_t pid = Waitpid(-1, &wstatus, WUNTRACED);
@@ -43,13 +64,20 @@ void sigchld_handler(int sig) {
  * <What does sigint_handler do?>
  */
 void sigint_handler(int sig) {
-    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+#ifdef DEBUG
+    debugPrint(sig);
+#endif
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
 
     pid_t fg_pid = fgpid(job_list);
     if (fg_pid > 0) {
         Kill(-fg_pid, sig);
     }
+#ifdef DEBUG
+    else {
+        Sio_puts("No fg job\n");
+    }
+#endif
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }
@@ -58,13 +86,20 @@ void sigint_handler(int sig) {
  * <What does sigtstp_handler do?>
  */
 void sigtstp_handler(int sig) {
-    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+#ifdef DEBUG
+    debugPrint(sig);
+#endif
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
 
     pid_t fg_pid = fgpid(job_list);
     if (fg_pid > 0) {
         Kill(-fg_pid, sig);
     }
+#ifdef DEBUG
+    else {
+        Sio_puts("No fg job\n");
+    }
+#endif
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }
@@ -74,7 +109,9 @@ void sigtstp_handler(int sig) {
  * <What does  the sigusr1_handler do?>
  */
 void sigusr1_handler(int sig) {
-    sigset_t job_control_mask = create_mask(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+#ifdef DEBUG
+    debugPrint(sig);
+#endif
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     fg_interrupt = 1;
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);

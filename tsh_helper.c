@@ -23,9 +23,8 @@ typedef enum parse_state
 
 struct job_t job_list[MAXJOBS]; // The job list
 
-int fg_interrupt = 0;                   // Bool to that checks if fg job was interrupted by a signal.
-sigset_t job_control_set;               // Set of the job control signals (SIGINT, SIGTSTP, SIGCHLD)
-sigset_t fg_interrupt_set;              // Set of SIGUSR1 for signalling fg interrupt
+int fg_interrupt = 0;                   // Bool to check if fg job was interrupted by a signal.
+sigset_t job_control_mask;              // Signal set of the job control signals.
 
 /* 
  * parseline - Parse the command line and build the argv array.
@@ -525,12 +524,3 @@ void usage(void)
     exit(EXIT_FAILURE);
 }
 
-void setup_masks(void) {
-    Sigemptyset(&job_control_set);
-    Sigaddset(&job_control_set, SIGINT);
-    Sigaddset(&job_control_set, SIGTSTP);
-    Sigaddset(&job_control_set, SIGCHLD);
-
-    Sigemptyset(&fg_interrupt_set);
-    Sigaddset(&fg_interrupt_set, SIGUSR1);
-}
