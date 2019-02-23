@@ -21,7 +21,7 @@ void bg(struct cmdline_tokens *tokens) {
     printf("[%d] (%d) %s\n", jid, job->pid, job->cmdline);
     if (job != NULL &&job->state == ST) {
         job->state = BG;
-        Kill(job->pid, SIGCONT);
+        Kill(-job->pid, SIGCONT);
     }
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
 }
@@ -32,7 +32,7 @@ void fg(struct cmdline_tokens *tokens) {
     struct job_t *job = getjobjid(job_list, jid);
     if (job != NULL && (job->state == ST || job->state == BG)) {
         if (job->state == ST) {
-            Kill(job->pid, SIGCONT);
+            Kill(-job->pid, SIGCONT);
         }
 
         job->state = FG;

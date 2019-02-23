@@ -38,7 +38,14 @@ void sigchld_handler(int sig) {
 
         pid = waitpid(WAIT_ANY, &wstatus, WUNTRACED | WNOHANG);
 
-        if (pid <= 0) {
+        if (pid < 0) {
+            if (errno != ECHILD) {      // If the error was not cause by no more child processes
+                unix_error("waitpid error");
+            }
+            break;
+        }
+
+        if (pid == 0) {
             break;
         }
 
