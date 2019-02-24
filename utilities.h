@@ -26,4 +26,10 @@ void printMsg(int jid, pid_t pid, int sig);
 /* Converts cmd jid arguments to integers */
 int cmdjid_to_int(char* cmdjid);
 
+/* Redirect IO from the the fd (from) to the file named (to) */
+void redirect_io(int from, char* to);
+
+/* Sets io to stdin and stdout */
+void set_std_io(void);
+
 #endif //TINY_LINUX_SHELL_UTILITIES_H

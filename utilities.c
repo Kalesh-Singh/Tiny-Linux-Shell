@@ -50,7 +50,7 @@ void restore_signal_defaults(int argc, ...) {
 #endif
     for (int i = 0; i < argc; i++) {
         int sig = va_arg(sigs, int);
- #ifdef DEBUG
+#ifdef DEBUG
         switch(sig) {
             case 2:
                 printf("%10s", "SIGINT");
@@ -68,7 +68,7 @@ void restore_signal_defaults(int argc, ...) {
                 printf("%10s", "UNKNOWN");
                 break;
         }
- #endif
+#endif
         Signal(sig, SIG_DFL);
     }
     va_end(sigs);
@@ -93,8 +93,50 @@ void printMsg(int jid, pid_t pid, int sig) {
     Sio_puts("\n");
 }
 
-int cmdjid_to_int(char* cmdjid) {
-    char* jid_str = cmdjid + 1;
-    char* ep;
+int cmdjid_to_int(char *cmdjid) {
+    char *jid_str = cmdjid + 1;
+    char *ep;
     return strtol(jid_str, &ep, 10);
+}
+
+void redirect_io(int from, char* to) {
+    int file;
+
+    switch (from) {
+        case STDIN_FILENO:
+            file = open(to, O_RDONLY);
+            break;
+        case STDOUT_FILENO:
+            file = open(to, O_CREAT | O_WRONLY);
+            break;
+    }
+
+    if (file < 0) {
+        unix_error("open error");
+        exit(1);
+    }
+
+    switch (from) {
+        case STDIN_FILENO:
+            in_fd = file;
+            break;
+        case STDOUT_FILENO:
+            out_fd = file;
+            break;
+    }
+
+    Dup2(file, from);
+}
+
+void set_std_io(void) {
+    if (in_fd != STDIN_FILENO) {
+        Dup2(in_fd, STDIN_FILENO);
+        close(in_fd);
+        in_fd = STDIN_FILENO;
+    }
+    if (out_fd != STDOUT_FILENO) {
+        Dup2(in_fd, STDOUT_FILENO);
+        close(out_fd);
+        out_fd = STDOUT_FILENO;
+    }
 }

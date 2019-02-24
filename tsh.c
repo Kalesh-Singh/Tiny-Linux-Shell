@@ -142,6 +142,15 @@ void eval(const char *cmdline) {
             run(cmdline, &token, parse_result);
             break;
         case PARSELINE_FG:
+            if (token.builtin != BUILTIN_NONE) {
+                if (token.infile) {
+                    redirect_io(STDIN_FILENO, token.infile);
+                }
+                if (token.outfile) {
+                    redirect_io(STDOUT_FILENO, token.outfile);
+                }
+            }
+
             switch (token.builtin) {
                 case BUILTIN_QUIT:
                     quit();
@@ -158,6 +167,12 @@ void eval(const char *cmdline) {
                     run(cmdline, &token, parse_result);
                     break;
             }
+
+            if (token.builtin != BUILTIN_NONE) {
+                if (token.infile || token.outfile) {
+                    set_std_io();
+                }
+            }
     }
 
     return;
@@ -170,21 +185,27 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
     pid_t pid = Fork();
     if (pid == 0) {         // Child process
         Setpgid(0, 0);
+
+        if (token->infile) {
+            redirect_io(STDIN_FILENO, token->infile);
+        }
+
+        if (token->outfile) {
+            redirect_io(STDOUT_FILENO, token->outfile);
+        }
+
         Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
         restore_signal_defaults(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
         Execve(token->argv[0], token->argv, environ);
     } else {                // Parent process
-        job_state state;
         if (parse_result == PARSELINE_BG) {
-            state = BG;
-            addjob(job_list, pid, state, cmdline);
+            addjob(job_list, pid, BG, cmdline);
             int jid = pid2jid(job_list, pid);
             printf("[%d] (%d) %s\n", jid, pid, cmdline);
             Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
         } else if (parse_result == PARSELINE_FG) {
             fg_interrupt = 0;                   // Reset fg_interrupt
-            state = FG;
-            addjob(job_list, pid, state, cmdline);
+            addjob(job_list, pid, FG, cmdline);
 #ifdef DEBUG
             printf("Before Sigsuspend\n");
 #endif
