@@ -12,7 +12,8 @@ sigset_t create_mask(int argc, ...) {
 #ifdef DEBUG
     printf("Mask created: ");
 #endif
-    for (int i = 0; i < argc; i++) {
+    int i;
+    for (i = 0; i < argc; i++) {
         int sig = va_arg(sigs, int);
 #ifdef DEBUG
         switch(sig) {
@@ -48,7 +49,8 @@ void restore_signal_defaults(int argc, ...) {
 #ifdef DEBUG
     printf("Restored to defaults: ");
 #endif
-    for (int i = 0; i < argc; i++) {
+    int i;
+    for (i = 0; i < argc; i++) {
         int sig = va_arg(sigs, int);
 #ifdef DEBUG
         switch(sig) {
