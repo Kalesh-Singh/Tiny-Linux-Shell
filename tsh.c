@@ -169,9 +169,7 @@ void eval(const char *cmdline) {
             }
 
             if (token.builtin != BUILTIN_NONE) {
-                if (token.infile || token.outfile) {
-                    set_std_io();
-                }
+                set_std_io();
             }
     }
 
