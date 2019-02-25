@@ -6,6 +6,9 @@
  */
 
 #include "tsh_helper.h"
+#include "utilities.h"
+#include "sighandlers.h"
+#include "builtin.h"
 
 /*
  * If DEBUG is defined, enable contracts and printing on dbg_printf.
@@ -27,45 +30,7 @@
 /* Function prototypes */
 void eval(const char *cmdline);
 
-void sigchld_handler(int sig);
-
-void sigtstp_handler(int sig);
-
-void sigint_handler(int sig);
-
-void sigquit_handler(int sig);
-
-// ------- Signals ----------
-/* Blocks and unblocks the signal set:
- * { SIGCHLD, SIGINT, SIGTSTP }
- *
- * how - expects one of the following arguments.
- *  SIG_BLOCK
- *      The set of blocked signals is the union of the current
- *      set and the set argument.
- *  SIG_UNBLOCK
- *      The signals in set are removed from the current set of
- *      blocked signals.  It is permissible to attempt to unblock
- *      a signal which is  not blocked.
- *  Return Value:
- *      The old mask. */
-sigset_t change_signal_mask(int how);
-
-/* Restores the signals:
- *  {SIGCHLD, SIGINT, SIGTSTP, SIGQUIT }
- *  to their default behaviors. */
-void restore_signal_defaults();
-//----------------------------------------
-
-//------- Built In Commands --------
-void quit();        // Terminates the shell process
-void jobs();
-//----------------------------------
-
-//-------Foreground and Background Jobs---------
-void run_in_fg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the foreground.
-void run_in_bg(const char *cmdline, struct cmdline_tokens *token);   // Creates and runs a process in the background.
-//---------------------------------------------
+void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
 
 /*
  * <Write main's function header documentation. What does main do?>
@@ -75,6 +40,8 @@ void run_in_bg(const char *cmdline, struct cmdline_tokens *token);   // Creates 
  *  any pertinent side effects, and any assumptions that the function makes."
  */
 int main(int argc, char **argv) {
+    job_control_mask = create_mask(4, SIGINT, SIGCHLD, SIGTSTP, SIGUSR1);   // Create job control mask.
+
     char c;
     char cmdline[MAXLINE_TSH];  // Cmdline for fgets
     bool emit_prompt = true;    // Emit prompt (default)
@@ -104,6 +71,7 @@ int main(int argc, char **argv) {
     Signal(SIGINT, sigint_handler);   // Handles ctrl-c
     Signal(SIGTSTP, sigtstp_handler);  // Handles ctrl-z
     Signal(SIGCHLD, sigchld_handler);  // Handles terminated or stopped child
+    Signal(SIGUSR1, sigusr1_handler);   // To determine whether a fg job triggered sigchld_handler
 
     Signal(SIGTTIN, SIG_IGN);
     Signal(SIGTTOU, SIG_IGN);
@@ -162,9 +130,6 @@ int main(int argc, char **argv) {
 void eval(const char *cmdline) {
     parseline_return parse_result;
     struct cmdline_tokens token;
-    sigset_t ourmask;
-    // TODO: remove the line below! It's only here to keep the compiler happy
-    Sigemptyset(&ourmask);
 
     // Parse command line
     parse_result = parseline(cmdline, &token);
@@ -174,150 +139,83 @@ void eval(const char *cmdline) {
         case PARSELINE_ERROR:
             return;
         case PARSELINE_BG:
-            run_in_bg(cmdline, &token);
+            run(cmdline, &token, parse_result);
             break;
         case PARSELINE_FG:
+            if (token.builtin != BUILTIN_NONE) {
+                if (token.infile) {
+                    redirect_io(STDIN_FILENO, token.infile);
+                }
+                if (token.outfile) {
+                    redirect_io(STDOUT_FILENO, token.outfile);
+                }
+            }
+
             switch (token.builtin) {
                 case BUILTIN_QUIT:
                     quit();
                 case BUILTIN_FG:
+                    fg(&token);
                     break;
                 case BUILTIN_BG:
+                    bg(&token);
                     break;
                 case BUILTIN_JOBS:
                     jobs();
                     break;
                 case BUILTIN_NONE:
-                    run_in_fg(cmdline, &token);
+                    run(cmdline, &token, parse_result);
                     break;
+            }
+
+            if (token.builtin != BUILTIN_NONE) {
+                set_std_io();
             }
     }
 
     return;
 }
 
-/*****************
- * Signal handlers
- *****************/
+void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
+    sigset_t old_mask;       // SIGINT, SIGTSTP, SIGCHLD and SIGUSR1 Unblocked
+    Sigprocmask(SIG_BLOCK, &job_control_mask, &old_mask);
 
-/* 
- * <What does sigchld_handler do?>
- */
-void sigchld_handler(int sig) {
-    return;
-}
-
-/* 
- * <What does sigint_handler do?>
- */
-void sigint_handler(int sig) {
-    change_signal_mask(SIG_BLOCK);
-    pid_t fg_pid = fgpid(job_list);
-    int fg_jid = pid2jid(job_list, fg_pid);
-    change_signal_mask(SIG_UNBLOCK);
-    Kill(-fg_pid, SIGINT);
-    char *f_str = "Job [%d] (%d) terminated by signal %d\n";
-    char str[MAXLINE];
-    sprintf(str, f_str, fg_jid, fg_pid, sig);
-    Fputs(str, stdout);
-    change_signal_mask(SIG_BLOCK);
-    deletejob(job_list, fg_pid);
-    change_signal_mask(SIG_UNBLOCK);
-    return;
-}
-
-/*
- * <What does sigtstp_handler do?>
- */
-void sigtstp_handler(int sig) {
-    change_signal_mask(SIG_BLOCK);
-    pid_t fg_pid = fgpid(job_list);
-    struct job_t *fg_job = getjobpid(job_list, fg_pid);
-    fg_job->state = ST;
-    change_signal_mask(SIG_UNBLOCK);
-    Kill(-fg_pid, SIGTSTP);
-    char *f_str = "Job [%d] (%d) stopped by signal %d\n";
-    char str[MAXLINE];
-    sprintf(str, f_str, fg_job->jid, fg_job->pid, sig);
-    Fputs(str, stdout);
-    return;
-}
-
-
-/*****************
- Built-in Commands
- *****************/
-
-void quit() {
-    exit(0);
-}
-
-void jobs() {
-    change_signal_mask(SIG_BLOCK);
-    listjobs(job_list, STDOUT_FILENO);
-    change_signal_mask(SIG_UNBLOCK);
-}
-
-void run_in_fg(const char *cmdline, struct cmdline_tokens *token) {
-    change_signal_mask(SIG_BLOCK);
     pid_t pid = Fork();
-
-    if (pid == 0) {
+    if (pid == 0) {         // Child process
         Setpgid(0, 0);
-        change_signal_mask(SIG_UNBLOCK);
-        restore_signal_defaults();
-        Execve(token->argv[0], token->argv, environ);
-    } else {
-        addjob(job_list, pid, FG, cmdline);
-        change_signal_mask(SIG_UNBLOCK);
-        int wstatus;
-        Waitpid(pid, &wstatus, WUNTRACED);
-        if ( WIFEXITED(wstatus)) {      // If child exited.
-            change_signal_mask(SIG_BLOCK);
-            deletejob(job_list, pid);
-            change_signal_mask(SIG_UNBLOCK);
+
+        if (token->infile) {
+            redirect_io(STDIN_FILENO, token->infile);
         }
-    }
-}
 
-void run_in_bg(const char *cmdline, struct cmdline_tokens *token) {
-    change_signal_mask(SIG_BLOCK);
-    pid_t pid = Fork();
+        if (token->outfile) {
+            redirect_io(STDOUT_FILENO, token->outfile);
+        }
 
-    if (pid == 0) {
-        Setpgid(0, 0);
-        change_signal_mask(SIG_UNBLOCK);
-        restore_signal_defaults();
+        Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
+        restore_signal_defaults(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
         Execve(token->argv[0], token->argv, environ);
-    } else {
-        addjob(job_list, pid, BG, cmdline);
-        struct job_t *job = getjobpid(job_list, pid);
-        change_signal_mask(SIG_UNBLOCK);
-        int jid = job->jid;
-
-        char *f_str = "[%d] (%d) %s\n";
-        char str[MAXLINE];
-        sprintf(str, f_str, jid, pid, cmdline);
-        Fputs(str, stdout);
-
-        Waitpid(pid, NULL, WNOHANG);
+    } else {                // Parent process
+        if (parse_result == PARSELINE_BG) {
+            addjob(job_list, pid, BG, cmdline);
+            int jid = pid2jid(job_list, pid);
+            printf("[%d] (%d) %s\n", jid, pid, cmdline);
+            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
+        } else if (parse_result == PARSELINE_FG) {
+            fg_interrupt = 0;                   // Reset fg_interrupt
+            addjob(job_list, pid, FG, cmdline);
+#ifdef DEBUG
+            printf("Before Sigsuspend\n");
+#endif
+            while (!fg_interrupt) {
+                Sigsuspend(&old_mask);
+            }
+#ifdef DEBUG
+            printf("Before Sigsuspend\n");
+#endif
+            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
+        }
+        // NOTE: The signals must be unblocked AFTER the call to sigsuspend
+        // else the behavior is unpredictable.
     }
-}
-
-sigset_t change_signal_mask(int how) {
-    sigset_t sig_set;
-    sigset_t old_set;
-    Sigemptyset(&sig_set);
-    Sigaddset(&sig_set, SIGCHLD);
-    Sigaddset(&sig_set, SIGINT);
-    Sigaddset(&sig_set, SIGTSTP);
-    Sigprocmask(how, &sig_set, &old_set);
-    return old_set;
-}
-
-void restore_signal_defaults() {
-    Signal(SIGCHLD, SIG_DFL);
-    Signal(SIGINT, SIG_DFL);
-    Signal(SIGTSTP, SIG_DFL);
-    Signal(SIGQUIT, SIG_DFL);
 }

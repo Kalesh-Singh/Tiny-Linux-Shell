@@ -23,6 +23,11 @@ typedef enum parse_state
 
 struct job_t job_list[MAXJOBS]; // The job list
 
+int fg_interrupt = 0;                   // Bool to check if fg job was interrupted by a signal.
+sigset_t job_control_mask;              // Signal set of the job control signals.
+int in_fd = STDIN_FILENO;               // Input file descriptor.
+int out_fd = STDOUT_FILENO;             // Output file descriptor.
+
 /* 
  * parseline - Parse the command line and build the argv array.
  * 
@@ -520,3 +525,4 @@ void usage(void)
     printf("   -p   do not emit a command prompt\n");
     exit(EXIT_FAILURE);
 }
+
