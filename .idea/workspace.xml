@@ -10,7 +10,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a359402a-6412-4c2b-a8d6-2cdb71c65ba6" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/utilities.c" beforeDir="false" afterPath="$PROJECT_DIR$/utilities.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sighandlers.c" beforeDir="false" afterPath="$PROJECT_DIR$/sighandlers.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sighandlers.h" beforeDir="false" afterPath="$PROJECT_DIR$/sighandlers.h" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -20,28 +21,38 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/utilities.c">
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/sighandlers.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="288">
-              <caret line="149" column="2" selection-start-line="149" selection-start-column="2" selection-end-line="149" selection-end-column="2" />
+            <state relative-caret-position="300">
+              <caret line="50" selection-start-line="50" selection-end-line="50" />
               <folding>
-                <element signature="e#894#927#0" expanded="true" />
-                <element signature="e#1037#1493#0" expanded="true" />
-                <element signature="e#1572#1587#0" expanded="true" />
-                <element signature="e#541#566#0" expanded="true" />
-                <element signature="e#676#1132#0" expanded="true" />
-                <element signature="e#1212#1227#0" expanded="true" />
+                <element signature="e#183#206#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/utilities.h">
+        <entry file="file://$PROJECT_DIR$/sighandlers.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="378">
-              <caret line="60" selection-start-line="60" selection-end-line="60" />
+            <state relative-caret-position="1530">
+              <caret line="85" column="30" selection-start-line="85" selection-start-column="30" selection-end-line="85" selection-end-column="30" />
+              <folding>
+                <element signature="e#3106#3122#0" expanded="true" />
+                <element signature="e#3293#3338#0" expanded="true" />
+                <element signature="e#2181#2197#0" expanded="true" />
+                <element signature="e#2368#2413#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/tsh_helper.c">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="185">
+              <caret line="208" column="5" selection-start-line="208" selection-start-column="5" selection-end-line="208" selection-end-column="5" />
             </state>
           </provider>
         </entry>
@@ -96,15 +107,15 @@
         <option value="$PROJECT_DIR$/csapp.c" />
         <option value="$PROJECT_DIR$/shell_sighandlers.c" />
         <option value="$PROJECT_DIR$/myspin1.c" />
-        <option value="$PROJECT_DIR$/sighandlers.h" />
         <option value="$PROJECT_DIR$/builtin.c" />
-        <option value="$PROJECT_DIR$/sighandlers.c" />
         <option value="$PROJECT_DIR$/tsh.c" />
         <option value="$PROJECT_DIR$/Makefile" />
         <option value="$PROJECT_DIR$/tsh_helper.h" />
         <option value="$PROJECT_DIR$/tsh_helper.c" />
         <option value="$PROJECT_DIR$/utilities.h" />
         <option value="$PROJECT_DIR$/utilities.c" />
+        <option value="$PROJECT_DIR$/sighandlers.c" />
+        <option value="$PROJECT_DIR$/sighandlers.h" />
       </list>
     </option>
   </component>
@@ -174,12 +185,12 @@
       <workItem from="1550638693613" duration="8842000" />
       <workItem from="1550816104174" duration="1799000" />
       <workItem from="1550900024203" duration="8353000" />
-      <workItem from="1551069893102" duration="2286000" />
+      <workItem from="1551069893102" duration="4488000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="85443000" />
+    <option name="totallyTimeSpent" value="87645000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -205,7 +216,7 @@
       <window_info anchor="bottom" id="TODO" order="6" weight="0.32937366" />
       <window_info anchor="bottom" id="Database Changes" order="7" />
       <window_info anchor="bottom" id="Version Control" order="8" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.27843988" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.36836404" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -403,13 +414,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/sighandlers.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="162">
-          <caret line="9" column="22" selection-start-line="9" selection-start-column="22" selection-end-line="9" selection-end-column="22" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/runtrace.c">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="196">
@@ -420,13 +424,6 @@
     <entry file="file://$PROJECT_DIR$/trace24.txt">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/sighandlers.c">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="108">
-          <caret line="32" column="16" selection-start-line="32" selection-start-column="16" selection-end-line="32" selection-end-column="16" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/trace22.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="126">
@@ -435,13 +432,6 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/out" />
-    <entry file="file://$PROJECT_DIR$/tsh_helper.c">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="285">
-          <caret line="25" selection-start-line="25" selection-end-line="25" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Makefile">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="64">
@@ -476,17 +466,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/utilities.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="378">
-          <caret line="60" selection-start-line="60" selection-end-line="60" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/utilities.c">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="288">
-          <caret line="149" column="2" selection-start-line="149" selection-start-column="2" selection-end-line="149" selection-end-column="2" />
+        <state relative-caret-position="239">
+          <caret line="182" column="2" selection-start-line="182" selection-start-column="2" selection-end-line="182" selection-end-column="2" />
           <folding>
             <element signature="e#894#927#0" expanded="true" />
             <element signature="e#1037#1493#0" expanded="true" />
@@ -495,6 +478,43 @@
             <element signature="e#676#1132#0" expanded="true" />
             <element signature="e#1212#1227#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/utilities.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="486">
+          <caret line="71" selection-start-line="71" selection-end-line="71" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/sighandlers.c">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1530">
+          <caret line="85" column="30" selection-start-line="85" selection-start-column="30" selection-end-line="85" selection-end-column="30" />
+          <folding>
+            <element signature="e#3106#3122#0" expanded="true" />
+            <element signature="e#3293#3338#0" expanded="true" />
+            <element signature="e#2181#2197#0" expanded="true" />
+            <element signature="e#2368#2413#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/sighandlers.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="300">
+          <caret line="50" selection-start-line="50" selection-end-line="50" />
+          <folding>
+            <element signature="e#183#206#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tsh_helper.c">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="185">
+          <caret line="208" column="5" selection-start-line="208" selection-start-column="5" selection-end-line="208" selection-end-column="5" />
         </state>
       </provider>
     </entry>
