@@ -84,10 +84,6 @@ struct cmdline_tokens
 extern char prompt[];               // Command line prompt (do not change)
 extern bool verbose;                // If true, prints additional output
 extern bool check_block;            // If true, check that signals are blocked
-extern int fg_interrupt;            // Bool to check if fg job was interrupted by a signal.
-extern sigset_t job_control_mask;   // Signal set of the job control signals.
-extern int in_fd;                   // Input file descriptor.
-extern int out_fd;                  // Output file descriptor.
 
 extern struct job_t job_list[MAXJOBS];  // The job list
 

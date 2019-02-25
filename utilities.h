@@ -11,7 +11,11 @@
 #include <string.h>
 #include <stdarg.h>
 
-
+/* Global variables */
+extern int fg_interrupt;            // Bool to check if fg job was interrupted by a signal.
+extern sigset_t job_control_mask;   // Signal set of the job control signals.
+extern int in_fd;                   // Input file descriptor.
+extern int out_fd;                  // Output file descriptor.
 
 /* Restores the signals (...) to their default behaviors. */
 void restore_signal_defaults(int argc, ...);
