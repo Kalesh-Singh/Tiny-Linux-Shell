@@ -27,9 +27,12 @@ void bg(struct cmdline_tokens *tokens) {
 }
 
 void fg(struct cmdline_tokens *tokens) {
-    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
+    sigset_t old_mask;      // Has SIGINT, SIGTSTP and SIGCHLD Unblocked
+    Sigprocmask(SIG_BLOCK, &job_control_mask, &old_mask);
+
     int jid = cmdjid_to_int(tokens->argv[1]);
     struct job_t *job = getjobjid(job_list, jid);
+
     if (job != NULL && (job->state == ST || job->state == BG)) {
         if (job->state == ST) {
             Kill(-job->pid, SIGCONT);
@@ -37,12 +40,11 @@ void fg(struct cmdline_tokens *tokens) {
 
         job->state = FG;
 
-         // TODO: Fix this
-        sigset_t ourmask;
-        Sigemptyset(&ourmask);
-        Sigaddset(&ourmask, SIGUSR1);
-        Sigsuspend(&ourmask);
+         while (fgpid(job_list)) {
+             Sigsuspend(&old_mask);
+         }
     }
+
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }
