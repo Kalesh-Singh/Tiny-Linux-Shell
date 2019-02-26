@@ -207,7 +207,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
 #ifdef DEBUG
             printf("Before Sigsuspend\n");
 #endif
-            while (!fg_interrupt) {
+            while (fgpid(job_list)) {
                 Sigsuspend(&old_mask);
             }
 #ifdef DEBUG
