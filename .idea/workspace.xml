@@ -9,7 +9,9 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a359402a-6412-4c2b-a8d6-2cdb71c65ba6" name="Default Changelist" comment="" />
+    <list default="true" id="a359402a-6412-4c2b-a8d6-2cdb71c65ba6" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/tsh.c" beforeDir="false" afterPath="$PROJECT_DIR$/tsh.c" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,8 +41,16 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/sighandlers.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="733">
-              <caret line="65" column="8" selection-start-line="65" selection-start-column="8" selection-end-line="65" selection-end-column="8" />
+            <state>
+              <caret line="50" column="13" selection-start-line="50" selection-start-column="13" selection-end-line="50" selection-end-column="13" />
+              <folding>
+                <element signature="e#1313#1329#0" expanded="true" />
+                <element signature="e#3100#3116#0" expanded="true" />
+                <element signature="e#3287#3332#0" expanded="true" />
+                <element signature="e#3629#3645#0" expanded="true" />
+                <element signature="e#3816#3861#0" expanded="true" />
+                <element signature="e#4086#4102#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -48,8 +58,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/tsh.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="159">
-              <caret line="42" column="67" selection-start-line="42" selection-start-column="67" selection-end-line="42" selection-end-column="67" />
+            <state relative-caret-position="550">
+              <caret line="193" column="89" selection-start-line="193" selection-start-column="89" selection-end-line="193" selection-end-column="89" />
               <folding>
                 <element signature="e#167#190#0" expanded="true" />
                 <element signature="e#350#600#0" expanded="true" />
@@ -146,14 +156,14 @@
         <option value="$PROJECT_DIR$/shell_sighandlers.c" />
         <option value="$PROJECT_DIR$/myspin1.c" />
         <option value="$PROJECT_DIR$/builtin.c" />
-        <option value="$PROJECT_DIR$/tsh.c" />
         <option value="$PROJECT_DIR$/Makefile" />
         <option value="$PROJECT_DIR$/tsh_helper.h" />
         <option value="$PROJECT_DIR$/tsh_helper.c" />
         <option value="$PROJECT_DIR$/utilities.h" />
         <option value="$PROJECT_DIR$/utilities.c" />
-        <option value="$PROJECT_DIR$/sighandlers.c" />
         <option value="$PROJECT_DIR$/sighandlers.h" />
+        <option value="$PROJECT_DIR$/sighandlers.c" />
+        <option value="$PROJECT_DIR$/tsh.c" />
       </list>
     </option>
   </component>
@@ -228,7 +238,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="87660000" />
+    <option name="totallyTimeSpent" value="87902000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -254,7 +264,7 @@
       <window_info anchor="bottom" id="TODO" order="6" weight="0.32937366" />
       <window_info anchor="bottom" id="Database Changes" order="7" />
       <window_info anchor="bottom" id="Version Control" order="8" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="9" visible="true" weight="0.39243242" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.39243242" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -477,19 +487,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tsh.c">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="159">
-          <caret line="42" column="67" selection-start-line="42" selection-start-column="67" selection-end-line="42" selection-end-column="67" />
-          <folding>
-            <element signature="e#167#190#0" expanded="true" />
-            <element signature="e#350#600#0" expanded="true" />
-            <element signature="e#6544#6574#0" expanded="true" />
-            <element signature="e#6698#6728#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/tsh_helper.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="229">
@@ -526,13 +523,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/sighandlers.c">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="733">
-          <caret line="65" column="8" selection-start-line="65" selection-start-column="8" selection-end-line="65" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/sighandlers.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="108">
@@ -544,6 +534,34 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="229">
           <caret line="345" column="3" selection-start-line="345" selection-start-column="3" selection-end-line="345" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/sighandlers.c">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret line="50" column="13" selection-start-line="50" selection-start-column="13" selection-end-line="50" selection-end-column="13" />
+          <folding>
+            <element signature="e#1313#1329#0" expanded="true" />
+            <element signature="e#3100#3116#0" expanded="true" />
+            <element signature="e#3287#3332#0" expanded="true" />
+            <element signature="e#3629#3645#0" expanded="true" />
+            <element signature="e#3816#3861#0" expanded="true" />
+            <element signature="e#4086#4102#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tsh.c">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="550">
+          <caret line="193" column="89" selection-start-line="193" selection-start-column="89" selection-end-line="193" selection-end-column="89" />
+          <folding>
+            <element signature="e#167#190#0" expanded="true" />
+            <element signature="e#350#600#0" expanded="true" />
+            <element signature="e#6544#6574#0" expanded="true" />
+            <element signature="e#6698#6728#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

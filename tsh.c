@@ -176,7 +176,7 @@ void eval(const char *cmdline) {
 }
 
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
-    sigset_t old_mask;       // SIGINT, SIGTSTP, SIGCHLD and SIGUSR1 Unblocked
+    sigset_t old_mask;       // Mask with SIGINT, SIGTSTP and SIGCHLD Unblocked
     Sigprocmask(SIG_BLOCK, &job_control_mask, &old_mask);
 
     pid_t pid = Fork();
@@ -191,7 +191,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
             redirect_io(STDOUT_FILENO, token->outfile);
         }
 
-        Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
+        Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
         restore_signal_defaults(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
         Execve(token->argv[0], token->argv, environ);
     } else {                // Parent process
