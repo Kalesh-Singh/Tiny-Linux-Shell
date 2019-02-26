@@ -203,15 +203,11 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
         } else if (parse_result == PARSELINE_FG) {
             fg_interrupt = 0;                   // Reset fg_interrupt
             addjob(job_list, pid, FG, cmdline);
-#ifdef DEBUG
-            printf("Before Sigsuspend\n");
-#endif
+
             while (fgpid(job_list)) {
                 Sigsuspend(&old_mask);
             }
-#ifdef DEBUG
-            printf("Before Sigsuspend\n");
-#endif
+
             Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
         }
         // NOTE: The signals must be unblocked AFTER the call to sigsuspend
