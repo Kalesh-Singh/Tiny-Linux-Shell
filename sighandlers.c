@@ -19,9 +19,6 @@
  *
  * If the child process exited normally, it is deleted from the job list
  * but no notification message is printed.
- *
- * If the child process that changed state  was the current foreground process,
- * the handler raises a SIGUSR1 signal.
  */
 void sigchld_handler(int sig) {
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
@@ -93,21 +90,6 @@ void sigint_handler(int sig) {
     if (fg_pid > 0) {
         Kill(-fg_pid, sig);
     }
-    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
-    return;
-}
-
-/*
- * Catches SIGUSR1 signals.
- *
- * Upon receipt of a SIGUSR1 signal sets fg_interrupt to 1.
- */
-void sigusr1_handler(int sig) {
-#ifdef DEBUG
-    debugPrint(sig);
-#endif
-    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
-    fg_interrupt = 1;
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }
