@@ -48,7 +48,7 @@ void sigchld_handler(int sig) {
 #endif
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     int wstatus;
-    pid_t pid, fg_pid;
+    pid_t pid;
 
     while (true) {
 
@@ -65,8 +65,6 @@ void sigchld_handler(int sig) {
             break;
         }
 
-        fg_pid = fgpid(job_list);               // Current fg job pid.
-
         if (WIFSIGNALED(wstatus)) {         // If child terminated by a signal
             int sig = WTERMSIG(wstatus);
             int jid = pid2jid(job_list, pid);
@@ -80,11 +78,6 @@ void sigchld_handler(int sig) {
             struct job_t *stopped_job = getjobpid(job_list, pid);
             stopped_job->state = ST;
             printMsg(stopped_job->jid, stopped_job->pid, sig);
-        }
-        if (WIFSIGNALED(wstatus) || WIFEXITED(wstatus) || WIFSTOPPED(wstatus)) {
-            if (pid == fg_pid) {            // If child was the current fg job
-                raise(SIGUSR1);
-            }
         }
     }
 

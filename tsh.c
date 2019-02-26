@@ -40,7 +40,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
  *  any pertinent side effects, and any assumptions that the function makes."
  */
 int main(int argc, char **argv) {
-    job_control_mask = create_mask(4, SIGINT, SIGCHLD, SIGTSTP, SIGUSR1);   // Create job control mask.
+    job_control_mask = create_mask(3, SIGINT, SIGCHLD, SIGTSTP);
 
     char c;
     char cmdline[MAXLINE_TSH];  // Cmdline for fgets
@@ -71,7 +71,6 @@ int main(int argc, char **argv) {
     Signal(SIGINT, sigint_handler);   // Handles ctrl-c
     Signal(SIGTSTP, sigtstp_handler);  // Handles ctrl-z
     Signal(SIGCHLD, sigchld_handler);  // Handles terminated or stopped child
-    Signal(SIGUSR1, sigusr1_handler);   // To determine whether a fg job triggered sigchld_handler
 
     Signal(SIGTTIN, SIG_IGN);
     Signal(SIGTTOU, SIG_IGN);
