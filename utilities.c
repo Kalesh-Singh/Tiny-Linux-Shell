@@ -102,23 +102,17 @@ void redirect_io(int from, char* to) {
 
     switch (from) {
         case STDIN_FILENO:
-            file = open(to, O_RDONLY);
-            break;
-        case STDOUT_FILENO:
-            file = open(to, O_CREAT | O_WRONLY);
-            break;
-    }
-
-    if (file < 0) {
-        unix_error("open error");
-        exit(1);
-    }
-
-    switch (from) {
-        case STDIN_FILENO:
+            if ((file = open(to, O_RDONLY)) < 0) {
+                unix_error("open error");
+                exit(1);
+            }
             in_fd = file;
             break;
         case STDOUT_FILENO:
+            if ((file = open(to, O_CREAT | O_WRONLY)) < 0) {
+                unix_error("open error");
+                exit(1);
+            }
             out_fd = file;
             break;
     }
