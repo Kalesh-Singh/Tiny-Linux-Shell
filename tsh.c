@@ -192,14 +192,14 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
         }
 
         Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
-        restore_signal_defaults(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+        restore_signal_defaults(3, SIGINT, SIGTSTP, SIGCHLD);
         Execve(token->argv[0], token->argv, environ);
     } else {                // Parent process
         if (parse_result == PARSELINE_BG) {
             addjob(job_list, pid, BG, cmdline);
             int jid = pid2jid(job_list, pid);
             printf("[%d] (%d) %s\n", jid, pid, cmdline);
-            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
+            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
         } else if (parse_result == PARSELINE_FG) {
             fg_interrupt = 0;                   // Reset fg_interrupt
             addjob(job_list, pid, FG, cmdline);
@@ -212,7 +212,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
 #ifdef DEBUG
             printf("Before Sigsuspend\n");
 #endif
-            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
+            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
         }
         // NOTE: The signals must be unblocked AFTER the call to sigsuspend
         // else the behavior is unpredictable.
