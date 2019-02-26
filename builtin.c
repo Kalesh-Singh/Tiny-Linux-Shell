@@ -37,10 +37,10 @@ void fg(struct cmdline_tokens *tokens) {
 
         job->state = FG;
 
+         // TODO: Fix this
         sigset_t ourmask;
         Sigemptyset(&ourmask);
         Sigaddset(&ourmask, SIGUSR1);
-
         Sigsuspend(&ourmask);
     }
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);

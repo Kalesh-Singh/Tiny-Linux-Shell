@@ -40,7 +40,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
  *  any pertinent side effects, and any assumptions that the function makes."
  */
 int main(int argc, char **argv) {
-    job_control_mask = create_mask(4, SIGINT, SIGCHLD, SIGTSTP, SIGUSR1);   // Create job control mask.
+    job_control_mask = create_mask(3, SIGINT, SIGCHLD, SIGTSTP);
 
     char c;
     char cmdline[MAXLINE_TSH];  // Cmdline for fgets
@@ -71,7 +71,6 @@ int main(int argc, char **argv) {
     Signal(SIGINT, sigint_handler);   // Handles ctrl-c
     Signal(SIGTSTP, sigtstp_handler);  // Handles ctrl-z
     Signal(SIGCHLD, sigchld_handler);  // Handles terminated or stopped child
-    Signal(SIGUSR1, sigusr1_handler);   // To determine whether a fg job triggered sigchld_handler
 
     Signal(SIGTTIN, SIG_IGN);
     Signal(SIGTTOU, SIG_IGN);
@@ -177,7 +176,7 @@ void eval(const char *cmdline) {
 }
 
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
-    sigset_t old_mask;       // SIGINT, SIGTSTP, SIGCHLD and SIGUSR1 Unblocked
+    sigset_t old_mask;       // Mask with SIGINT, SIGTSTP and SIGCHLD Unblocked
     Sigprocmask(SIG_BLOCK, &job_control_mask, &old_mask);
 
     pid_t pid = Fork();
@@ -192,28 +191,28 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
             redirect_io(STDOUT_FILENO, token->outfile);
         }
 
-        Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
-        restore_signal_defaults(4, SIGINT, SIGTSTP, SIGCHLD, SIGUSR1);
+        Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
+        restore_signal_defaults(3, SIGINT, SIGTSTP, SIGCHLD);
         Execve(token->argv[0], token->argv, environ);
     } else {                // Parent process
         if (parse_result == PARSELINE_BG) {
             addjob(job_list, pid, BG, cmdline);
             int jid = pid2jid(job_list, pid);
             printf("[%d] (%d) %s\n", jid, pid, cmdline);
-            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
+            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
         } else if (parse_result == PARSELINE_FG) {
             fg_interrupt = 0;                   // Reset fg_interrupt
             addjob(job_list, pid, FG, cmdline);
 #ifdef DEBUG
             printf("Before Sigsuspend\n");
 #endif
-            while (!fg_interrupt) {
+            while (fgpid(job_list)) {
                 Sigsuspend(&old_mask);
             }
 #ifdef DEBUG
             printf("Before Sigsuspend\n");
 #endif
-            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);   // Unblock INT, TSTP, CHLD, USR1
+            Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
         }
         // NOTE: The signals must be unblocked AFTER the call to sigsuspend
         // else the behavior is unpredictable.

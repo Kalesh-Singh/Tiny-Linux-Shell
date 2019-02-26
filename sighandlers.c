@@ -4,25 +4,6 @@
 
 #include "sighandlers.h"
 
-void debugPrint(int sig) {
-    Sio_puts("\nHANDLER: ");
-    switch (sig) {
-        case 2:
-            Sio_puts("sigint_handler");
-            break;
-        case 10:
-            Sio_puts("sigusr1_handler");
-            break;
-        case 17:
-            Sio_puts("sigchld_handler");
-            break;
-        case 20:
-            Sio_puts("sigtstp_handler");
-            break;
-    }
-    Sio_puts(" called.\n\n");
-}
-
 /*
  * Catches SIGCHLD signals from both foreground and background processes
  * launched by the shell.
@@ -38,17 +19,11 @@ void debugPrint(int sig) {
  *
  * If the child process exited normally, it is deleted from the job list
  * but no notification message is printed.
- *
- * If the child process that changed state  was the current foreground process,
- * the handler raises a SIGUSR1 signal.
  */
 void sigchld_handler(int sig) {
-#ifdef DEBUG
-    debugPrint(sig);
-#endif
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
     int wstatus;
-    pid_t pid, fg_pid;
+    pid_t pid;
 
     while (true) {
 
@@ -65,8 +40,6 @@ void sigchld_handler(int sig) {
             break;
         }
 
-        fg_pid = fgpid(job_list);               // Current fg job pid.
-
         if (WIFSIGNALED(wstatus)) {         // If child terminated by a signal
             int sig = WTERMSIG(wstatus);
             int jid = pid2jid(job_list, pid);
@@ -81,11 +54,6 @@ void sigchld_handler(int sig) {
             stopped_job->state = ST;
             printMsg(stopped_job->jid, stopped_job->pid, sig);
         }
-        if (WIFSIGNALED(wstatus) || WIFEXITED(wstatus) || WIFSTOPPED(wstatus)) {
-            if (pid == fg_pid) {            // If child was the current fg job
-                raise(SIGUSR1);
-            }
-        }
     }
 
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
@@ -99,20 +67,12 @@ void sigchld_handler(int sig) {
  * If there is no current foreground job, no action is taken.
  */
 void sigtstp_handler(int sig) {
-#ifdef DEBUG
-    debugPrint(sig);
-#endif
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
 
     pid_t fg_pid = fgpid(job_list);
     if (fg_pid > 0) {
         Kill(-fg_pid, sig);
     }
-#ifdef DEBUG
-    else {
-        Sio_puts("No fg job\n");
-    }
-#endif
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }
@@ -124,35 +84,12 @@ void sigtstp_handler(int sig) {
  * If there is no current foreground job, no action is taken.
  */
 void sigint_handler(int sig) {
-#ifdef DEBUG
-    debugPrint(sig);
-#endif
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
 
     pid_t fg_pid = fgpid(job_list);
     if (fg_pid > 0) {
         Kill(-fg_pid, sig);
     }
-#ifdef DEBUG
-    else {
-        Sio_puts("No fg job\n");
-    }
-#endif
-    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
-    return;
-}
-
-/*
- * Catches SIGUSR1 signals.
- *
- * Upon receipt of a SIGUSR1 signal sets fg_interrupt to 1.
- */
-void sigusr1_handler(int sig) {
-#ifdef DEBUG
-    debugPrint(sig);
-#endif
-    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
-    fg_interrupt = 1;
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
     return;
 }

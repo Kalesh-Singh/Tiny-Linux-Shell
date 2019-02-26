@@ -25,9 +25,6 @@
  *
  * If the child process exited normally, it is deleted from the job list
  * but no notification message is printed.
- *
- * If the child process that changed state  was the current foreground process,
- * the handler raises a SIGUSR1 signal.
  */
 void sigchld_handler(int sig);
 
@@ -46,12 +43,5 @@ void sigtstp_handler(int sig);
  * If there is no current foreground job, no action is taken.
  */
 void sigint_handler(int sig);
-
-/*
- * Catches SIGUSR1 signals.
- *
- * Upon receipt of a SIGUSR1 signal sets fg_interrupt to 1.
- */
-void sigusr1_handler(int sig);
 
 #endif //TINY_LINUX_SHELL_SIGHANDLERS_H

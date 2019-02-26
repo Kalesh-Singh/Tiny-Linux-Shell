@@ -23,37 +23,12 @@ int out_fd = STDOUT_FILENO;     // Output file descriptor.
 void restore_signal_defaults(int argc, ...) {
     va_list sigs;
     va_start(sigs, argc);
-#ifdef DEBUG
-    printf("Restored to defaults: ");
-#endif
     int i;
     for (i = 0; i < argc; i++) {
         int sig = va_arg(sigs, int);
-#ifdef DEBUG
-        switch(sig) {
-            case 2:
-                printf("%10s", "SIGINT");
-                break;
-            case 20:
-                printf("%10s", "SIGTSTP");
-                break;
-            case 17:
-                printf("%10s", "SIGCHLD");
-                break;
-            case 10:
-                printf("%10s", "SIGUSR1");
-                break;
-            default:
-                printf("%10s", "UNKNOWN");
-                break;
-        }
-#endif
         Signal(sig, SIG_DFL);
     }
     va_end(sigs);
-#ifdef DEBUG
-    printf("\n\n");
-#endif
 }
 
 /*
@@ -68,37 +43,12 @@ sigset_t create_mask(int argc, ...) {
     va_start(sigs, argc);
     sigset_t mask;
     Sigemptyset(&mask);
-#ifdef DEBUG
-    printf("Mask created: ");
-#endif
     int i;
     for (i = 0; i < argc; i++) {
         int sig = va_arg(sigs, int);
-#ifdef DEBUG
-        switch(sig) {
-            case 2:
-                printf("%10s", "SIGINT");
-                break;
-            case 20:
-                printf("%10s", "SIGTSTP");
-                break;
-            case 17:
-                printf("%10s", "SIGCHLD");
-                break;
-            case 10:
-                printf("%10s", "SIGUSR1");
-                break;
-            default:
-                printf("%10s", "UNKNOWN");
-                break;
-        }
-#endif
         Sigaddset(&mask, sig);
     }
     va_end(sigs);
-#ifdef DEBUG
-    printf("\n\n");
-#endif
     return mask;
 }
 
