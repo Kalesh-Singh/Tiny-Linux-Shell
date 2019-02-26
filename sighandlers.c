@@ -25,20 +25,7 @@ void sigchld_handler(int sig) {
     int wstatus;
     pid_t pid;
 
-    while (true) {
-
-        pid = waitpid(WAIT_ANY, &wstatus, WUNTRACED | WNOHANG);
-
-        if (pid < 0) {
-            if (errno != ECHILD) {              // If the error was not caused by no more child processes
-                unix_error("waitpid error");    // print the error message.
-            }
-            break;
-        }
-
-        if (pid == 0) {
-            break;
-        }
+    while ((pid = waitpid(WAIT_ANY, &wstatus, WUNTRACED | WNOHANG)) > 0) {
 
         if (WIFSIGNALED(wstatus)) {         // If child terminated by a signal
             int sig = WTERMSIG(wstatus);
