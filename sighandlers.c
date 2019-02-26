@@ -22,24 +22,24 @@
  */
 void sigchld_handler(int sig) {
     Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
+
     int wstatus;
     pid_t pid;
 
     while ((pid = waitpid(WAIT_ANY, &wstatus, WUNTRACED | WNOHANG)) > 0) {
 
+        struct job_t *job = getjobpid(job_list, pid);
+
         if (WIFSIGNALED(wstatus)) {         // If child terminated by a signal
             int sig = WTERMSIG(wstatus);
-            int jid = pid2jid(job_list, pid);
-            printMsg(jid, pid, sig);
+            printMsg(job->jid, job->pid, sig);
             deletejob(job_list, pid);
-        }
-        if (WIFEXITED(wstatus)) {           // If child exited normally by returning from main or calling exit()
+        } else if (WIFEXITED(wstatus)) {    // If child exited normally by returning from main or calling exit()
             deletejob(job_list, pid);
         } else if (WIFSTOPPED(wstatus)) {   // If child stopped by a signal
             int sig = WSTOPSIG(wstatus);
-            struct job_t *stopped_job = getjobpid(job_list, pid);
-            stopped_job->state = ST;
-            printMsg(stopped_job->jid, stopped_job->pid, sig);
+            job->state = ST;
+            printMsg(job->jid, job->pid, sig);
         }
     }
 
