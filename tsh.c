@@ -194,6 +194,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
         Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
         restore_signal_defaults(3, SIGINT, SIGTSTP, SIGCHLD);
         Execve(token->argv[0], token->argv, environ);
+
     } else {                // Parent process
 
         if (parse_result == PARSELINE_BG) {
@@ -208,7 +209,5 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
         }
 
         Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
-        // NOTE: The signals must be unblocked AFTER the call to sigsuspend
-        // else the behavior is unpredictable.
     }
 }
