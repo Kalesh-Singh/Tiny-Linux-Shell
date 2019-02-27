@@ -9,9 +9,31 @@
 #include "utilities.h"
 #include <stdlib.h>
 
-void quit();        // Terminates the shell process
+/*
+ * Terminates the shell
+ * @return void
+ */
+void quit();
+
+/*
+ * Lists the running and stopped background jobs.
+ * @return void
+ */
 void jobs();
+
+/*
+ * Changes a stopped job to a running foreground job.
+ * @param tokens from parsing the command line.
+ * @return void
+ */
 void bg(struct cmdline_tokens *tokens);
+
+/*
+ * Changes a stopped job or running background job
+ * into a running foreground job.
+ * @param tokens from parsing the command line.
+ * @return void
+ */
 void fg(struct cmdline_tokens *tokens);
 
 #endif //TINY_LINUX_SHELL_BUILTIN_H
