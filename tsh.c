@@ -34,6 +34,12 @@
  *                       called foo.
  * tsh> /bin/cat < foo - displays the contents of file foo on
  *                       stdout.
+ *
+ * Each job can be identified by either a process ID (PID) or a
+ * job ID (JID), which is a positive integer assigned by tsh.
+ * JIDs should be denoted on the command line by the prefix ‘%’.
+ *
+ * For example, “%5” denotes JID 5, and “5” denotes PID 5.
  */
 
 #include "tsh_helper.h"
