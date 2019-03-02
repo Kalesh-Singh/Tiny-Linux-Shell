@@ -58,9 +58,33 @@
 #define dbg_ensures(...)
 #endif
 
+
+/* Global variables */
+sigset_t job_control_mask;      // Signal set of the job control signals.
+int in_fd = STDIN_FILENO;       // Input file descriptor.
+int out_fd = STDOUT_FILENO;     // Output file descriptor.
+
 /* Function prototypes */
 void eval(const char *cmdline);
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
+
+/* Signal handlers */
+void sigchld_handler(int sig);
+void sigtstp_handler(int sig);
+void sigint_handler(int sig);
+
+/* Built-in commands */
+void quit();
+void jobs();
+void bg(struct cmdline_tokens *tokens);
+void fg(struct cmdline_tokens *tokens);
+
+/* Utility functions */
+void restore_signal_defaults(int argc, ...);
+void printMsg(int jid, pid_t pid, int sig);
+int cmdjid_to_int(char* cmdjid);
+void redirect_io(int from, char* to);
+void set_std_io(void);
 
 /*
  *  Creates the job control mask and registers the signal handlers, then
@@ -250,5 +274,285 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
         }
 
         Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
+    }
+}
+
+/*****************
+ * Signal handlers
+ *****************/
+/*
+ * Catches SIGCHLD signals from both foreground and background processes
+ * launched by the shell.
+ *
+ * Upon receipt of a SIGCHLD signal the handler reaps all child processes
+ * that have finished. or were terminated or stopped by a signal.
+ *
+ * If the child process was stopped, its state in the job list is updated,
+ * and a message is printed in the shell to notify the user.
+ *
+ * If the child process was terminated by a signal it is deleted from the
+ * job list, and a message is printed in the shell to notify the user.
+ *
+ * If the child process exited normally, it is deleted from the job list
+ * but no notification message is printed.
+ */
+void sigchld_handler(int sig) {
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
+
+    int wstatus;
+    pid_t pid;
+
+    while ((pid = waitpid(WAIT_ANY, &wstatus, WUNTRACED | WNOHANG)) > 0) {
+
+        struct job_t *job = getjobpid(job_list, pid);
+
+        if (WIFSIGNALED(wstatus)) {         // If child terminated by a signal
+            int sig = WTERMSIG(wstatus);
+            printMsg(job->jid, job->pid, sig);
+            deletejob(job_list, pid);
+        } else if (WIFEXITED(wstatus)) {    // If child exited normally by returning from main or calling exit()
+            deletejob(job_list, pid);
+        } else if (WIFSTOPPED(wstatus)) {   // If child stopped by a signal
+            int sig = WSTOPSIG(wstatus);
+            job->state = ST;
+            printMsg(job->jid, job->pid, sig);
+        }
+    }
+
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
+    return;
+}
+
+/*
+ * Catches SIGTSTP signals and forwards them to the
+ * process group of the current foreground job.
+ *
+ * If there is no current foreground job, no action is taken.
+ */
+void sigtstp_handler(int sig) {
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
+
+    pid_t fg_pid = fgpid(job_list);
+    if (fg_pid > 0) {
+        Kill(-fg_pid, sig);
+    }
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
+    return;
+}
+
+/*
+ * Catches SIGINT signals and forwards them to the
+ * process group of the current foreground job.
+ *
+ * If there is no current foreground job, no action is taken.
+ */
+void sigint_handler(int sig) {
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
+
+    pid_t fg_pid = fgpid(job_list);
+    if (fg_pid > 0) {
+        Kill(-fg_pid, sig);
+    }
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
+    return;
+}
+
+/*******************
+ * Built-in commands
+ ******************/
+/*
+ * Terminates the shell
+ * @return void
+ */
+void quit() {
+    exit(0);
+}
+
+/*
+ * Lists the running and stopped background jobs.
+ * @return void
+ */
+void jobs() {
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
+    listjobs(job_list, STDOUT_FILENO);
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
+}
+
+/*
+ * Changes a stopped job to a running foreground job.
+ * @param tokens from parsing the command line.
+ * @return void
+ */
+void bg(struct cmdline_tokens *tokens) {
+    Sigprocmask(SIG_BLOCK, &job_control_mask, NULL);
+    int jid = cmdjid_to_int(tokens->argv[1]);
+    struct job_t *job = getjobjid(job_list, jid);
+    printf("[%d] (%d) %s\n", jid, job->pid, job->cmdline);
+    if (job != NULL &&job->state == ST) {
+        job->state = BG;
+        Kill(-job->pid, SIGCONT);
+    }
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
+}
+
+/*
+ * Changes a stopped job or running background job
+ * into a running foreground job.
+ * @param tokens from parsing the command line.
+ * @return void
+ */
+void fg(struct cmdline_tokens *tokens) {
+    sigset_t old_mask;      // Has SIGINT, SIGTSTP and SIGCHLD Unblocked
+    Sigprocmask(SIG_BLOCK, &job_control_mask, &old_mask);
+
+    int jid = cmdjid_to_int(tokens->argv[1]);
+    struct job_t *job = getjobjid(job_list, jid);
+
+    if (job != NULL && (job->state == ST || job->state == BG)) {
+        if (job->state == ST) {
+            Kill(-job->pid, SIGCONT);
+        }
+
+        job->state = FG;
+
+         while (fgpid(job_list)) {
+             Sigsuspend(&old_mask);
+         }
+    }
+
+    Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
+    return;
+}
+
+/*******************
+ * Utility functions
+ ******************/
+/*
+ * Restores signals to their default behaviors.
+ *
+ * Allows specifying signals that already have their default behavior,
+ * in which case no action is taken for that signal.
+ *
+ * @param argc an integer specifying the number of signals the function will take.
+ * @param ... a comma separated list of integers that specify the signals that will
+ *            be restored to default behavior.
+ * @return void
+ */
+void restore_signal_defaults(int argc, ...) {
+    va_list sigs;
+    va_start(sigs, argc);
+    int i;
+    for (i = 0; i < argc; i++) {
+        int sig = va_arg(sigs, int);
+        Signal(sig, SIG_DFL);
+    }
+    va_end(sigs);
+}
+
+/*
+ * Creates a signal set of the signals passed in the arguments.
+ *
+ * @param argc an integer  specifying the number of signals the function will take.
+ * @param ... a comma separated list of integers that specify which signals
+ *            will be in the mask.
+ * @return a signal mask, of type sigset_t, containing the signals specified.
+ */
+sigset_t create_mask(int argc, ...) {
+    va_list sigs;
+    va_start(sigs, argc);
+    sigset_t mask;
+    Sigemptyset(&mask);
+    int i;
+    for (i = 0; i < argc; i++) {
+        int sig = va_arg(sigs, int);
+        Sigaddset(&mask, sig);
+    }
+    va_end(sigs);
+    return mask;
+}
+
+/* Prints a message to the shell when a job is terminated or stopped by a signal.
+ *
+ * This function is signal safe and is intended for use in a signal handler.
+ *
+ * @param jid the jod id of the job that was terminated or stopped.
+ * @param pid the process id of the job that was terminated or stopped.
+ * @param sig expected to be either SIGINT or SIGTSTP.
+ * @return void.
+ */
+void printMsg(int jid, pid_t pid, int sig) {
+    Sio_puts("Job [");
+    Sio_putl(jid);
+    Sio_puts("] (");
+    Sio_putl(pid);
+    Sio_puts(") ");
+    if (sig == SIGINT) {
+        Sio_puts("terminated");
+    } else if (sig == SIGTSTP) {
+        Sio_puts("stopped");
+    }
+    Sio_puts(" by signal ");
+    Sio_putl(sig);
+    Sio_puts("\n");
+}
+
+/*
+ * Converts a job id specified on the command line in the form of %jid to an integer.
+ *
+ * @param cmdjid the job id as specified on the command line i.e including the % symbol.
+ * @return an integer equivalent of the command line job id.
+ */
+int cmdjid_to_int(char *cmdjid) {
+    char *jid_str = cmdjid + 1;
+    char *ep;
+    return strtol(jid_str, &ep, 10);
+}
+
+/*
+ * Redirects I/O from a file descriptor to another file.
+ *
+ * For output redirection if file does not exists it will be created.
+ * However, file must exists already for input redirection.
+ *
+ * @param from expected to be either STDOUT_FILENO or STDIN_FILENO.
+ * @param to the name of the file that the descriptor will be redirected to.
+ */
+void redirect_io(int from, char* to) {
+    int file;
+
+    switch (from) {
+        case STDIN_FILENO:
+            if ((file = open(to, O_RDONLY)) < 0) {
+                unix_error("open error");
+                exit(1);
+            }
+            in_fd = file;
+            break;
+        case STDOUT_FILENO:
+            if ((file = open(to, O_CREAT | O_WRONLY)) < 0) {
+                unix_error("open error");
+                exit(1);
+            }
+            out_fd = file;
+            break;
+    }
+
+    Dup2(file, from);
+}
+
+/*
+ * Sets the file descriptor for input to STDIN_FILENO and
+ * the file descriptor for output to STDOUT_FILENO.
+ */
+void set_std_io(void) {
+    if (in_fd != STDIN_FILENO) {
+        Dup2(in_fd, STDIN_FILENO);
+        close(in_fd);
+        in_fd = STDIN_FILENO;
+    }
+    if (out_fd != STDOUT_FILENO) {
+        Dup2(in_fd, STDOUT_FILENO);
+        close(out_fd);
+        out_fd = STDOUT_FILENO;
     }
 }
