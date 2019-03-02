@@ -1,8 +1,39 @@
 
 /* 
  * tsh - A tiny shell program with job control
- * <The line above is not a sufficient documentation.
- *  You will need to write your program documentation.>
+ *
+ * The shell supports the notion of job control, which
+ * allows users to move jobs back and forth between background
+ * and foreground, and to change the process state (running,
+ * stopped, terminated) of the processes in a job.
+ *
+ * Typing ctrl-c causes a SIGINT signal to be delivered to each
+ * process in the foreground job. The default action for SIGINT
+ * is to terminate the process.
+ *
+ * Typing ctrl-z causes a SIGTSTP signal to be delivered to each
+ * process in the foreground job. The default action for SIGTSTP
+ * is to place a process in the stopped state, where it remains
+ * until it is awakened by th receipt of a SIGCONT signal.
+ *
+ * The shell also provides various built-in commands that support
+ * job control:
+ *
+ * - quit     : terminates the shell.
+ * - jobs     : Lists the running and stopped background jobs.
+ * - bg <job> : Change a stopped job into a running foreground job.
+ * - fg <job> : Change a stopped job or running background job
+ *              into a running foreground job.
+ *
+ * The shell also supports the notion of I/O redirection which
+ * allows users to redirect stdin and stdout to disk files.
+ *
+ * For example:
+ *
+ * tsh> /bin/ls > foo  - redirects the output of ls to a file
+ *                       called foo.
+ * tsh> /bin/cat < foo - displays the contents of file foo on
+ *                       stdout.
  */
 
 #include "tsh_helper.h"
@@ -111,20 +142,13 @@ int main(int argc, char **argv) {
     return -1; // control never reaches here
 }
 
-
-/* Handy guide for eval:
+/*
+ * Parses the command line and executes the appropriate
+ * built-in command, or creates an appropriate foreground
+ * or background job.
  *
- * If the user has requested a built-in command (quit, jobs, bg or fg),
- * then execute it immediately. Otherwise, fork a child process and
- * run the job in the context of the child. If the job is running in
- * the foreground, wait for it to terminate and then return.
- * Note: each child process must have a unique process group ID so that our
- * background children don't receive SIGINT (SIGTSTP) from the kernel
- * when we type ctrl-c (ctrl-z) at the keyboard.
- */
-
-/* 
- *
+ * @param cmdline the command line as entered in the shell.
+ * @return void.
  */
 void eval(const char *cmdline) {
     parseline_return parse_result;
@@ -166,23 +190,25 @@ void eval(const char *cmdline) {
                     break;
             }
 
-            // Reset standard I/O for built-in commands.
+            // Reset standard I/O for the shell
             if (token.builtin != BUILTIN_NONE) {
                 set_std_io();
             }
+            break;
     }
-
     return;
 }
 
 /*
- * Forks and executes a child process of the shell based on the parsed command line.
+ * Forks and executes a child process based on the parsed command line.
  *
  * Suspends the shell, if job created is a foreground job, until the foreground job
  * is stopped, terminated or exits.
  *
  * If the job created runs in the background, a notification is printed containing
  * the job id, process id and the command line of the background job.
+ *
+ * Handles I/O redirection for created jobs if necessary.
  *
  * @param cmdline the command line entered in the shell.
  * @param token the tokens parsed from the command line.
