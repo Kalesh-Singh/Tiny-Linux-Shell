@@ -138,9 +138,8 @@ void eval(const char *cmdline) {
         case PARSELINE_ERROR:
             return;
         case PARSELINE_BG:
-            run(cmdline, &token, parse_result);
-            break;
         case PARSELINE_FG:
+            // I/O Redirection for built-in commands.
             if (token.builtin != BUILTIN_NONE) {
                 if (token.infile) {
                     redirect_io(STDIN_FILENO, token.infile);
@@ -167,6 +166,7 @@ void eval(const char *cmdline) {
                     break;
             }
 
+            // Reset standard I/O for built-in commands.
             if (token.builtin != BUILTIN_NONE) {
                 set_std_io();
             }
