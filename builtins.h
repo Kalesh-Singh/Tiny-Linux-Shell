@@ -2,8 +2,8 @@
 // Created by kalesh on 2/19/19.
 //
 
-#ifndef TINY_LINUX_SHELL_BUILTIN_H
-#define TINY_LINUX_SHELL_BUILTIN_H
+#ifndef TINY_LINUX_SHELL_BUILTINS_H
+#define TINY_LINUX_SHELL_BUILTINS_H
 
 #include "tsh_helper.h"
 #include "utilities.h"
@@ -36,4 +36,4 @@ void bg(struct cmdline_tokens *tokens);
  */
 void fg(struct cmdline_tokens *tokens);
 
-#endif //TINY_LINUX_SHELL_BUILTIN_H
+#endif //TINY_LINUX_SHELL_BUILTINS_H

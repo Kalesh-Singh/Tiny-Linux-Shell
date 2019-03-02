@@ -8,7 +8,7 @@
 #include "tsh_helper.h"
 #include "utilities.h"
 #include "sighandlers.h"
-#include "builtin.h"
+#include "builtins.h"
 
 /*
  * If DEBUG is defined, enable contracts and printing on dbg_printf.
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
  */
 
 /* 
- * <What does eval do?>
+ *
  */
 void eval(const char *cmdline) {
     parseline_return parse_result;
@@ -175,18 +175,35 @@ void eval(const char *cmdline) {
     return;
 }
 
+/*
+ * Forks and executes a child process of the shell based on the parsed command line.
+ *
+ * Suspends the shell, if job created is a foreground job, until the foreground job
+ * is stopped, terminated or exits.
+ *
+ * If the job created runs in the background, a notification is printed containing
+ * the job id, process id and the command line of the background job.
+ *
+ * @param cmdline the command line entered in the shell.
+ * @param token the tokens parsed from the command line.
+ * @parse_result the parse result returned from the parseline call.
+ * @return void
+ *
+ */
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
     sigset_t old_mask;       // Mask with SIGINT, SIGTSTP and SIGCHLD Unblocked
     Sigprocmask(SIG_BLOCK, &job_control_mask, &old_mask);
 
     pid_t pid = Fork();
     if (pid == 0) {         // Child process
-        Setpgid(0, 0);
+        Setpgid(0, 0);      // Place child process in a new process group.
 
+        // Redirect input
         if (token->infile) {
             redirect_io(STDIN_FILENO, token->infile);
         }
 
+        // Redirect output
         if (token->outfile) {
             redirect_io(STDOUT_FILENO, token->outfile);
         }
@@ -203,7 +220,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
             printf("[%d] (%d) %s\n", jid, pid, cmdline);
         } else if (parse_result == PARSELINE_FG) {
             addjob(job_list, pid, FG, cmdline);
-            while (fgpid(job_list)) {
+            while (fgpid(job_list)) {   // While there is a foreground job
                 Sigsuspend(&old_mask);
             }
         }
