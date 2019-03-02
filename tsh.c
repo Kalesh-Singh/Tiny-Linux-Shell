@@ -37,10 +37,9 @@
  */
 
 #include "tsh_helper.h"
-#include "utilities.h"
-#include "sighandlers.h"
-#include "builtins.h"
-
+#include <string.h>
+#include <stdlib.h>
+#include <stdarg.h>
 /*
  * If DEBUG is defined, enable contracts and printing on dbg_printf.
  */
@@ -81,6 +80,7 @@ void fg(struct cmdline_tokens *tokens);
 
 /* Utility functions */
 void restore_signal_defaults(int argc, ...);
+sigset_t create_mask(int argc, ...);
 void printMsg(int jid, pid_t pid, int sig);
 int cmdjid_to_int(char* cmdjid);
 void redirect_io(int from, char* to);
