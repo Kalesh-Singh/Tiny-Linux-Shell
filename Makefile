@@ -17,7 +17,7 @@ all: $(FILES)
 # order that parent and child execute after invoking fork
 #
 tsh: tsh.c tsh_helper.c fork.c
-	$(CC) $(CFLAGS)   -Wl,--wrap,fork -o tsh tsh.c tsh_helper.c utilities.c sighandlers.c builtin.c fork.c csapp.c $(LIBS)
+	$(CC) $(CFLAGS)   -Wl,--wrap,fork -o tsh tsh.c tsh_helper.c utilities.c sighandlers.c builtins.c fork.c csapp.c $(LIBS)
 
 sdriver: sdriver.o
 sdriver.o: sdriver.c config.h

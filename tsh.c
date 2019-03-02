@@ -1,14 +1,51 @@
 
 /* 
  * tsh - A tiny shell program with job control
- * <The line above is not a sufficient documentation.
- *  You will need to write your program documentation.>
+ *
+ * The shell supports the notion of job control, which
+ * allows users to move jobs back and forth between background
+ * and foreground, and to change the process state (running,
+ * stopped, terminated) of the processes in a job.
+ *
+ * Typing ctrl-c causes a SIGINT signal to be delivered to each
+ * process in the foreground job. The default action for SIGINT
+ * is to terminate the process.
+ *
+ * Typing ctrl-z causes a SIGTSTP signal to be delivered to each
+ * process in the foreground job. The default action for SIGTSTP
+ * is to place a process in the stopped state, where it remains
+ * until it is awakened by th receipt of a SIGCONT signal.
+ *
+ * The shell also provides various built-in commands that support
+ * job control:
+ *
+ * - quit     : terminates the shell.
+ * - jobs     : Lists the running and stopped background jobs.
+ * - bg <job> : Change a stopped job into a running foreground job.
+ * - fg <job> : Change a stopped job or running background job
+ *              into a running foreground job.
+ *
+ * The shell also supports the notion of I/O redirection which
+ * allows users to redirect stdin and stdout to disk files.
+ *
+ * For example:
+ *
+ * tsh> /bin/ls > foo  - redirects the output of ls to a file
+ *                       called foo.
+ * tsh> /bin/cat < foo - displays the contents of file foo on
+ *                       stdout.
+ *
+ * Each job can be identified by either a process ID (PID) or a
+ * job ID (JID), which is a positive integer assigned by tsh.
+ * JIDs should be denoted on the command line by the prefix ‘%’.
+ *
+ * For example, “%5” denotes JID 5, and “5” denotes PID 5.
  */
 
 #include "tsh_helper.h"
 #include "utilities.h"
 #include "sighandlers.h"
-#include "builtin.h"
+#include "builtins.h"
 
 /*
  * If DEBUG is defined, enable contracts and printing on dbg_printf.
@@ -29,15 +66,13 @@
 
 /* Function prototypes */
 void eval(const char *cmdline);
-
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
 
 /*
- * <Write main's function header documentation. What does main do?>
- * "Each function should be prefaced with a comment describing the purpose
- *  of the function (in a sentence or two), the function's arguments and
- *  return value, any error cases that are relevant to the caller,
- *  any pertinent side effects, and any assumptions that the function makes."
+ *  Creates the job control mask and registers the signal handlers, then
+ *  prints the shell prompt "tsh>" and waits for the user input in a loop.
+ *
+ *  @return the exit status code of the shell.
  */
 int main(int argc, char **argv) {
     job_control_mask = create_mask(3, SIGINT, SIGCHLD, SIGTSTP);
@@ -111,20 +146,13 @@ int main(int argc, char **argv) {
     return -1; // control never reaches here
 }
 
-
-/* Handy guide for eval:
+/*
+ * Parses the command line and executes the appropriate
+ * built-in command, or creates an appropriate foreground
+ * or background job.
  *
- * If the user has requested a built-in command (quit, jobs, bg or fg),
- * then execute it immediately. Otherwise, fork a child process and
- * run the job in the context of the child. If the job is running in
- * the foreground, wait for it to terminate and then return.
- * Note: each child process must have a unique process group ID so that our
- * background children don't receive SIGINT (SIGTSTP) from the kernel
- * when we type ctrl-c (ctrl-z) at the keyboard.
- */
-
-/* 
- * <What does eval do?>
+ * @param cmdline the command line as entered in the shell.
+ * @return void.
  */
 void eval(const char *cmdline) {
     parseline_return parse_result;
@@ -138,9 +166,8 @@ void eval(const char *cmdline) {
         case PARSELINE_ERROR:
             return;
         case PARSELINE_BG:
-            run(cmdline, &token, parse_result);
-            break;
         case PARSELINE_FG:
+            // I/O Redirection for built-in commands.
             if (token.builtin != BUILTIN_NONE) {
                 if (token.infile) {
                     redirect_io(STDIN_FILENO, token.infile);
@@ -167,26 +194,46 @@ void eval(const char *cmdline) {
                     break;
             }
 
+            // Reset standard I/O for the shell
             if (token.builtin != BUILTIN_NONE) {
                 set_std_io();
             }
+            break;
     }
-
     return;
 }
 
+/*
+ * Forks and executes a child process based on the parsed command line.
+ *
+ * Suspends the shell, if job created is a foreground job, until the foreground job
+ * is stopped, terminated or exits.
+ *
+ * If the job created runs in the background, a notification is printed containing
+ * the job id, process id and the command line of the background job.
+ *
+ * Handles I/O redirection for created jobs if necessary.
+ *
+ * @param cmdline the command line entered in the shell.
+ * @param token the tokens parsed from the command line.
+ * @parse_result the parse result returned from the parseline call.
+ * @return void
+ *
+ */
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
     sigset_t old_mask;       // Mask with SIGINT, SIGTSTP and SIGCHLD Unblocked
     Sigprocmask(SIG_BLOCK, &job_control_mask, &old_mask);
 
     pid_t pid = Fork();
     if (pid == 0) {         // Child process
-        Setpgid(0, 0);
+        Setpgid(0, 0);      // Place child process in a new process group.
 
+        // Redirect input
         if (token->infile) {
             redirect_io(STDIN_FILENO, token->infile);
         }
 
+        // Redirect output
         if (token->outfile) {
             redirect_io(STDOUT_FILENO, token->outfile);
         }
@@ -203,7 +250,7 @@ void run(const char *cmdline, struct cmdline_tokens *token, parseline_return par
             printf("[%d] (%d) %s\n", jid, pid, cmdline);
         } else if (parse_result == PARSELINE_FG) {
             addjob(job_list, pid, FG, cmdline);
-            while (fgpid(job_list)) {
+            while (fgpid(job_list)) {   // While there is a foreground job
                 Sigsuspend(&old_mask);
             }
         }
