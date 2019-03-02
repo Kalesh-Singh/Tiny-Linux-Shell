@@ -60,15 +60,13 @@
 
 /* Function prototypes */
 void eval(const char *cmdline);
-
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
 
 /*
- * <Write main's function header documentation. What does main do?>
- * "Each function should be prefaced with a comment describing the purpose
- *  of the function (in a sentence or two), the function's arguments and
- *  return value, any error cases that are relevant to the caller,
- *  any pertinent side effects, and any assumptions that the function makes."
+ *  Creates the job control mask and registers the signal handlers, then
+ *  prints the shell prompt "tsh>" and waits for the user input in a loop.
+ *
+ *  @return the exit status code of the shell.
  */
 int main(int argc, char **argv) {
     job_control_mask = create_mask(3, SIGINT, SIGCHLD, SIGTSTP);
