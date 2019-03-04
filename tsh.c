@@ -72,7 +72,8 @@ int out_fd = STDOUT_FILENO;     // Output file descriptor.
 /* Function prototypes */
 void eval(const char *cmdline);
 
-void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
+void run(const char *cmdline, struct cmdline_tokens *token,
+        parseline_return parse_result);
 
 /* Signal handlers */
 void sigchld_handler(int sig);
@@ -241,11 +242,12 @@ void eval(const char *cmdline) {
 /*
  * Forks and executes a child process based on the parsed command line.
  *
- * Suspends the shell, if job created is a foreground job, until the foreground job
- * is stopped, terminated or exits.
+ * Suspends the shell, if job created is a foreground job, until the
+ * foreground job is stopped, terminated or exits.
  *
- * If the job created runs in the background, a notification is printed containing
- * the job id, process id and the command line of the background job.
+ * If the job created runs in the background, a notification is printed
+ * containing the job id, process id and the command line of the
+ * background job.
  *
  * Handles I/O redirection for created jobs if necessary.
  *
@@ -255,7 +257,8 @@ void eval(const char *cmdline) {
  * @return void
  *
  */
-void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result) {
+void run(const char *cmdline, struct cmdline_tokens *token,
+        parseline_return parse_result) {
     sigset_t old_mask;       // Mask with SIGINT, SIGTSTP and SIGCHLD Unblocked
     Sigprocmask(SIG_BLOCK, &job_control_mask, &old_mask);
 
@@ -327,7 +330,7 @@ void sigchld_handler(int sig) {
             int sig = WTERMSIG(wstatus);
             printMsg(job->jid, job->pid, sig);
             deletejob(job_list, pid);
-        } else if (WIFEXITED(wstatus)) {    // If child exited normally by returning from main or calling exit()
+        } else if (WIFEXITED(wstatus)) {    // If child exited normally
             deletejob(job_list, pid);
         } else if (WIFSTOPPED(wstatus)) {   // If child stopped by a signal
             int sig = WSTOPSIG(wstatus);
@@ -469,7 +472,8 @@ void restore_signal_defaults(int argc, ...) {
 /*
  * Creates a signal set of the signals passed in the arguments.
  *
- * @param argc an integer  specifying the number of signals the function will take.
+ * @param argc an integer  specifying the number of signals the function
+ *             will take.
  * @param ... a comma separated list of integers that specify which signals
  *            will be in the mask.
  * @return a signal mask, of type sigset_t, containing the signals specified.
@@ -488,7 +492,8 @@ sigset_t create_mask(int argc, ...) {
     return mask;
 }
 
-/* Prints a message to the shell when a job is terminated or stopped by a signal.
+/* Prints a message to the shell when a job is terminated or stopped
+ * by a signal.
  *
  * This function is signal safe and is intended for use in a signal handler.
  *
@@ -514,9 +519,12 @@ void printMsg(int jid, pid_t pid, int sig) {
 }
 
 /*
- * Converts a job id specified on the command line in the form of %jid to an integer.
+ * Converts a job id specified on the command line in the form of
+ * %jid to an integer.
  *
- * @param cmdjid the job id as specified on the command line i.e including the % symbol.
+ * @param cmdjid the job id as specified on the command line
+ * i.e including the % symbol.
+ *
  * @return an integer equivalent of the command line job id.
  */
 int cmdjid_to_int(char *cmdjid) {
