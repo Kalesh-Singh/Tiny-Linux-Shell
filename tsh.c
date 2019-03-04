@@ -71,25 +71,36 @@ int out_fd = STDOUT_FILENO;     // Output file descriptor.
 
 /* Function prototypes */
 void eval(const char *cmdline);
+
 void run(const char *cmdline, struct cmdline_tokens *token, parseline_return parse_result);
 
 /* Signal handlers */
 void sigchld_handler(int sig);
+
 void sigtstp_handler(int sig);
+
 void sigint_handler(int sig);
 
 /* Built-in commands */
 void quit();
+
 void jobs();
+
 void bg(struct cmdline_tokens *tokens);
+
 void fg(struct cmdline_tokens *tokens);
 
 /* Utility functions */
 void restore_signal_defaults(int argc, ...);
+
 sigset_t create_mask(int argc, ...);
+
 void printMsg(int jid, pid_t pid, int sig);
-int cmdjid_to_int(char* cmdjid);
-void redirect_io(int from, char* to);
+
+int cmdjid_to_int(char *cmdjid);
+
+void redirect_io(int from, char *to);
+
 void set_std_io(void);
 
 /*
@@ -394,7 +405,7 @@ void bg(struct cmdline_tokens *tokens) {
     int jid = cmdjid_to_int(tokens->argv[1]);
     struct job_t *job = getjobjid(job_list, jid);
     printf("[%d] (%d) %s\n", jid, job->pid, job->cmdline);
-    if (job != NULL &&job->state == ST) {
+    if (job != NULL && job->state == ST) {
         job->state = BG;
         Kill(-job->pid, SIGCONT);
     }
@@ -421,9 +432,9 @@ void fg(struct cmdline_tokens *tokens) {
 
         job->state = FG;
 
-         while (fgpid(job_list)) {
-             Sigsuspend(&old_mask);
-         }
+        while (fgpid(job_list)) {
+            Sigsuspend(&old_mask);
+        }
     }
 
     Sigprocmask(SIG_UNBLOCK, &job_control_mask, NULL);
@@ -523,16 +534,16 @@ int cmdjid_to_int(char *cmdjid) {
  * @param from expected to be either STDOUT_FILENO or STDIN_FILENO.
  * @param to the name of the file that the descriptor will be redirected to.
  */
-void redirect_io(int from, char* to) {
+void redirect_io(int from, char *to) {
     int file;
 
     switch (from) {
         case STDIN_FILENO:
-            file =  Open(to, O_RDONLY, S_IRWXU);
+            file = Open(to, O_RDONLY, S_IRWXU);
             in_fd = file;
             break;
         case STDOUT_FILENO:
-            file =  Open(to, O_CREAT | O_WRONLY, S_IRWXU);
+            file = Open(to, O_CREAT | O_WRONLY, S_IRWXU);
             out_fd = file;
             break;
     }
